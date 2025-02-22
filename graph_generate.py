@@ -5,12 +5,12 @@ import random
 from typing import *
 
 def edges(graph: Dict[int, List[int]]):
-    '''
+    """
     Return the edge list of a graph and the edge list of the complementary graph
 
     Input: Adjacency list
     Note that if [i,j] is an edge, then [j,i] is also considered an edge.
-    '''
+    """
     edge = []
     edge_complement = []
     for node in graph:
@@ -23,11 +23,11 @@ def edges(graph: Dict[int, List[int]]):
     return edge, edge_complement
 
 def complete_edges(graph: Dict[int, List[int]]):
-    '''
+    """
     Converts unidirectional edges of a graph to bidirectional
 
     Input: Adjacency list
-    '''
+    """
 
     for x in range(len(graph)):
         for i in range(len(graph)):
@@ -36,9 +36,9 @@ def complete_edges(graph: Dict[int, List[int]]):
     return graph
 
 def cycle(n: int):
-    '''
+    """
     Creates a cycle graph of n nodes
-    '''
+    """
 
     graph = dict(zip([i for i in range(n)], [[] for i in range(n)]))
     for x in range(n):
@@ -47,25 +47,25 @@ def cycle(n: int):
     return graph
 
 def line(n: int):
-    '''
+    """
     Creates a line graph of n nodes
-    '''
+    """
 
     if n == 0:
         return dict()
     elif n == 1:
-        return {1: []}
+        return {0: []}
 
-    graph = {1: [2], n: {n - 1}}
-    for i in range(2, n):
+    graph = {0: [1], n - 1: {n - 2}}
+    for i in range(1, n - 1):
         graph[i] = [i - 1, i + 1]
 
     return graph
 
 def dense_graph(n):
-    '''
+    """
     Creates a graph where each possible edge is given a 50% chance of being assigned.
-    '''
+    """
 
     graph = dict(zip([i for i in range(n)], [[] for i in range(n)]))
     for x in range(n):
@@ -74,19 +74,19 @@ def dense_graph(n):
                 graph[x].append(i)
     return complete_edges(graph)
 
-def e_matrix(n: int, y: int, x: int):
-    '''
-    Creates matrix that is all zeroes except for a one at (y, x)
-    '''
+def e_matrix(n: int, i: int, j: int):
+    """
+    Creates matrix that is all zeroes except for a one at (i, j)
+    """
 
     E = np.zeros((n,n))
-    E[y, x] = 1
+    E[i, j] = 1
     return E
 
-def Delta_matrix(n: int):
-    '''
+def delta_matrix(n: int):
+    """
     Creates a matrix that is the sum of (e (x) e) where e is each of the e-matrices of size n
-    '''
+    """
 
     Delta = np.zeros((n**2,n**2))
     for i in range(n):
@@ -96,11 +96,11 @@ def Delta_matrix(n: int):
     return Delta
 
 def adjacency_matrix(graph: Dict[int, List[int]]):
-    '''
+    """
     Creates the adjacency matrix of a graph
 
     Input: Adjacency list
-    '''
+    """
 
     n = len(graph)
     edge_set, edge_complement = edges(graph)
