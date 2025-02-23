@@ -1,20 +1,11 @@
 # Parts of this file were copy-pasted from graph_generate.py by Colton Griffin and Aneesh Vinod Khilnani (https://github.com/chemfinal-dot/2021-Sinclair-Project)
 
-import numpy as np
 from typing import *
 
 class Graph:
     def __init__(self, adj_list: Dict[int, List[int]]):
         self._adj_list = adj_list
         self._n = len(adj_list)
-
-    @classmethod
-    def from_edge_list(cls, n, *edge_list: List[Tuple[int, int]]):
-        adj_list = { i: [] for i in range(0, n) }
-        for (i, j) in edge_list:
-            adj_list[i].append(j)
-            adj_list[j].append(i)
-        return cls(adj_list)
 
     def n(self) -> int:
         return self._n
@@ -23,7 +14,6 @@ class Graph:
         """
         Return the edge list of a graph and the edge list of the complementary graph
 
-        Input: Adjacency list
         Note that if [i,j] is an edge, then [j,i] is also considered an edge.
         """
         edge = []
@@ -80,40 +70,9 @@ def independent(n: int) -> Graph:
     adj_list = { i: [] for i in range(0, n)}
     return Graph(adj_list)
 
-def e_matrix(n: int, i: int, j: int):
-    """
-    Creates matrix that is all zeroes except for a one at (i, j)
-    """
-
-    E = np.zeros((n,n))
-    E[i, j] = 1
-    return E
-
-def delta_matrix(n: int):
-    """
-    Creates a matrix that is the sum of (e (x) e) where e is each of the e-matrices of size n
-    """
-
-    Delta = np.zeros((n**2,n**2))
-    for i in range(n):
-        for j in range(n):
-            E = e_matrix([i,j], n)
-            Delta = np.add(Delta, np.kron(E,E))
-    return Delta
-
-def adjacency_matrix(graph: Graph):
-    """
-    Creates the adjacency matrix of a graph
-
-    Input: Adjacency list
-    """
-
-    n = graph._n
-    edges, nonedges = graph.edges
-    E = np.zeros((n, n))
-    E_complement = np.zeros((n, n))
-    for x in edges:
-        E[x[0], x[1]] = 1
-    for x in nonedges:
-        E_complement[x[0], x[1]] = 1
-    return E, E_complement
+def from_edge_list(n, *edge_list: List[Tuple[int, int]]):
+    adj_list = { i: [] for i in range(0, n) }
+    for (i, j) in edge_list:
+        adj_list[i].append(j)
+        adj_list[j].append(i)
+    return Graph(adj_list)

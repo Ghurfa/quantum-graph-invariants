@@ -2,6 +2,7 @@ import numpy as np
 import picos
 from typing import *
 import graph_generate as gg
+import matrix_manip as mm
 from graph_generate import Graph
 
 def lovasz_theta(graph: Graph):
@@ -73,13 +74,11 @@ def ind_mn_to_sg(graph: Graph):
     prob.add_constraint(X >> 0)
 
     prob.solve(solver="cvxopt")
-    return 1 / lam.value
+    return 1 / lam.value, X.value
 
 def ind_sg_to_sl(graph_g: Graph, graph_l: Graph) -> float:
     """
     Computes Ind_CP(S_G : S_L), where L is a subgraph of G and S_G and S_L are the graph systems corresponding to G and L, respectively
-
-    If graph_l has fewer vertices than graph_g, then it is "padded" with extra vertexes
 
     This is the "relative Lovasz Theta" defined by Arazia, Griffin, and Sinclair.
 
@@ -109,7 +108,7 @@ def ind_sg_to_sl(graph_g: Graph, graph_l: Graph) -> float:
     # Constraint 2
     for i in range(0, n):
         for j in range(0, n):
-            if (i, j) in non_edges_g:
+            if any(map(lambda x: x[0] == i and x[1] == j, non_edges_g)):
                 continue
             for (edge_i, edge_j) in non_edges_l:
                 if (edge_i, edge_j) == (i, j):
@@ -126,35 +125,37 @@ def ind_sg_to_sl(graph_g: Graph, graph_l: Graph) -> float:
 relative_lov_theta = ind_sg_to_sl
 
 def pretty_print(matrix, precision: int = 2):
-    width, height = matrix.size
+    width, _ = matrix.size
+    n = int(width ** 0.5)
+    for ii in range(0, n):
+        for i in range(0, n):
+            for jj in range(0, n):
+                for j in range(0, n):
+                    val = matrix[ii * n + i, jj * n + j]
+                    print(f"{val:.{precision}f}".rjust(6), end='')
+                print ("  | ", end='')
+            print()
+        print()
+
+def pretty_print_unsectioned(matrix: np.matrix, precision: int = 2):
+    width, height = matrix.shape
     for i in range(0, height):
         for j in range(0, width):
-            val = 0 if (abs(matrix[i, j]) < 0.01) else matrix[i, j]
+            val = matrix[i, j]
             print(f"{val:.{precision}f}".rjust(6), end='')
         print()
 
-def main():
-    # print(f"Normal Lovasz Theta of L3: {lovasz_theta(gg.line(3))}")
+k5 = gg.complete(5)
+c5 = gg.cycle(5)
+# lam, X = relative_lov_theta(k5, c5)
 
-    # for i in range(2, 6):
-    #     print(f"IndCP Lovasz Theta of L{i}: {ind_mn_to_sg(gg.line(i))}")
-        
-    # print(f"IndCP Lovasz Theta of C5: {ind_mn_to_sg(gg.cycle(5))}")
+# pretty_print(X)
+# pretty_print_unsectioned(mm.compress(X))   
 
-    # print(f"Lovasz Theta of K5 : C5: {relative_lov_theta(gg.complete(5), gg.cycle(5))}")
+g = gg.from_edge_list(4, (0, 1), (0, 2), (1, 2), (2, 3))
+l2sg = gg.from_edge_list(4, (0, 1))
+c3sg = gg.from_edge_list(4, (0, 1), (0, 2), (1, 2))
 
-    for n in range(3, 6):
-        L_big = gg.line(n)
-        L2_sub_L_big = Graph.from_edge_list(n, (0, 1))
-        val, matrix = relative_lov_theta(L_big, L2_sub_L_big)
-        print(f"L2 : L{n} = {val}")
-        # pretty_print(matrix)
-    
-    g = Graph.from_edge_list(4, (0, 1), (1, 2), (1, 2), (2, 3))
-    L2_sub_g = Graph.from_edge_list(4, (0, 1))
-    L2_to_g, matrix = relative_lov_theta(g, L2_sub_g)
-    print(f"L2 : G = {L2_to_g}")
-
-if __name__ == "__main__":
-    main()
-    
+lam, X = relative_lov_theta(g, c3sg)
+print(lam)
+pretty_print(X)
