@@ -1,5 +1,6 @@
 # Parts of this file were copy-pasted from graph_generate.py by Colton Griffin and Aneesh Vinod Khilnani (https://github.com/chemfinal-dot/2021-Sinclair-Project)
 
+from __future__ import annotations
 from typing import *
 
 class Graph:
@@ -16,6 +17,7 @@ class Graph:
 
         Note that if [i,j] is an edge, then [j,i] is also considered an edge.
         """
+        
         edge = []
         edge_complement = []
         for node in self._adj_list:
@@ -26,16 +28,26 @@ class Graph:
                 if [i,j] not in edge and i != j:
                     edge_complement.append([i,j])
         return edge, edge_complement
+    
+    def is_subgraph_of(self, other: Graph):
+        if self._n != other._n:
+            return False
+        
+        for i in range(self._n):
+            if not(all(neighbor in other._adj_list[i] for neighbor in self._adj_list[i])):
+                return False
+        
+        return True
 
 def cycle(n: int) -> Graph:
     """
     Creates a cycle graph of n nodes
     """
 
-    adj_list = dict(zip([i for i in range(n)], [[] for i in range(n)]))
-    for x in range(n):
-        adj_list[x].append((x+1) % n)
-        adj_list[x].append((x-1) % n)
+    if n < 3:
+        return complete(n)
+
+    adj_list = {i: [(i + 1) % n, (i - 1) % n] for i in range(n)}
     return Graph(adj_list)
 
 def line(n: int) -> Graph:
@@ -43,10 +55,8 @@ def line(n: int) -> Graph:
     Creates a line graph of n nodes
     """
 
-    if n == 0:
-        return dict()
-    elif n == 1:
-        return {0: []}
+    if n < 3:
+        return complete(n)
 
     adj_list = { 0: [1], n - 1: {n - 2} }
     for i in range(1, n - 1):
@@ -59,7 +69,7 @@ def complete(n: int) -> Graph:
     Creates a complete graph of n nodes
     """
 
-    adj_list = { i: [j for j in range(0, n) if j != i] for i in range(0, n) }
+    adj_list = { i: [j for j in range(n) if j != i] for i in range(n) }
     return Graph(adj_list)
 
 def independent(n: int) -> Graph:
@@ -67,11 +77,16 @@ def independent(n: int) -> Graph:
     Creates a graph of n nodes with no edges
     """
 
-    adj_list = { i: [] for i in range(0, n)}
+    adj_list = { i: [] for i in range(n)}
     return Graph(adj_list)
 
 def from_edge_list(n, *edge_list: List[Tuple[int, int]]):
-    adj_list = { i: [] for i in range(0, n) }
+    """
+    Creates a graph with the given number of nodes and edge list
+
+    Edges need only be specified in one direction
+    """
+    adj_list = { i: [] for i in range(n) }
     for (i, j) in edge_list:
         adj_list[i].append(j)
         adj_list[j].append(i)
