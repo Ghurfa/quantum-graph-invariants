@@ -4,11 +4,11 @@ from typing import *
 import graph_generate as gg
 from graph_generate import Graph
 import matrix_manip as mm
-from matrix_manip import SimpleMatrix, SimpleChoiMatrix
+from matrix_manip import SimpleMatrix, SimpleSymmMatrix, SimpleChoiMatrix
 
 lam_precision = 4
 
-def lovasz_theta(graph: Graph) -> Tuple[float, SimpleMatrix]:
+def lovasz_theta(graph: Graph) -> Tuple[float, SimpleSymmMatrix]:
     """
     Calculate the Lovasz Theta number of a graph using SDP. Also returns the witness
 
@@ -36,9 +36,9 @@ def lovasz_theta(graph: Graph) -> Tuple[float, SimpleMatrix]:
     prob.add_constraint(Y >> 0)                     # Constraint 3
 
     prob.solve(solver="cvxopt")
-    return round(t.value, lam_precision), SimpleMatrix(np.matrix(Y.value))
+    return round(t.value, lam_precision), SimpleSymmMatrix(np.matrix(Y.value))
 
-def ind_mn_to_sg(graph: Graph) -> Tuple[float, SimpleMatrix]:
+def ind_mn_to_sg(graph: Graph) -> Tuple[float, SimpleSymmMatrix]:
     """
     Computes Ind_CP(M_n : S_G), where S_G is the graph system corresponding to the input graph, which equals the Lovasz Theta of the graph
 
@@ -79,7 +79,7 @@ def ind_mn_to_sg(graph: Graph) -> Tuple[float, SimpleMatrix]:
     prob.solve(solver="cvxopt")
     return round(1 / lam.value, lam_precision), SimpleChoiMatrix(np.matrix(X.value))
 
-def ind_sg_to_sl(graph_g: Graph, graph_l: Graph) -> Tuple[float, SimpleMatrix]:
+def ind_sg_to_sl(graph_g: Graph, graph_l: Graph) -> Tuple[float, SimpleSymmMatrix]:
     """
     Computes Ind_CP(S_G : S_L), where L is a subgraph of G and S_G and S_L are the graph systems corresponding to G and L, respectively
 
@@ -130,7 +130,7 @@ def ind_sg_to_sl(graph_g: Graph, graph_l: Graph) -> Tuple[float, SimpleMatrix]:
 
 relative_lov_theta = ind_sg_to_sl
 
-# No I've never heard of for loops or lists
+# No I've never heard of for loops/lists
 k1 = c1 = l1 = i1 = gg.complete(1)
 k2 = c2 = l2 = gg.complete(2); i2 = gg.independent(2)
 k3 = c3 = gg.complete(3); l3 = gg.line(3); i3 = gg.independent(3)
@@ -143,7 +143,10 @@ k9 = gg.complete(9); c9 = gg.cycle(9); l9 = gg.line(9); i9 = gg.independent(9)
 
 y = gg.from_edge_list(4, (0, 1), (0, 2), (0, 3))
 g = gg.from_edge_list(4, (0, 1), (0, 2), (1, 2), (2, 3))
-l2sg = gg.from_edge_list(4, (0, 1))
-c3sg = gg.from_edge_list(4, (0, 1), (0, 2), (1, 2))
+l2sg = gg.from_edge_list(4, (2, 3))
+l2sg_alt = gg.from_edge_list(4, (1, 2))
 
-# lam, X = relative_lov_theta(g, c3sg)
+lam_1, X_1 = relative_lov_theta(g, l2sg)
+lam_2, X_2 = relative_lov_theta(g, l2sg_alt)
+
+print(round(lam_1 - lam_2, 3) == 0) # Different!!

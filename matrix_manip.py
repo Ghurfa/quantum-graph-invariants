@@ -1,5 +1,6 @@
 # Parts of this file were copy-pasted from graph_generate.py by Colton Griffin and Aneesh Vinod Khilnani (https://github.com/chemfinal-dot/2021-Sinclair-Project)
 
+import operator
 import numpy as np
 from typing import *
 from graph_generate import Graph
@@ -18,12 +19,11 @@ def delta_matrix(n: int):
     Creates a matrix that is the sum of (e (x) e) where e is each of the e-matrices of size n
     """
 
-    Delta = np.zeros((n**2,n**2))
+    ret = np.zeros((n * n, n * n))
     for i in range(n):
         for j in range(n):
-            E = e_matrix([i,j], n)
-            Delta = np.add(Delta, np.kron(E,E))
-    return Delta
+            ret[i * n + i, j * n + j] = 1
+    return ret
 
 def adjacency_matrix(graph: Graph):
     """
@@ -40,9 +40,18 @@ def adjacency_matrix(graph: Graph):
         E_complement[x[0], x[1]] = 1
     return E, E_complement
 
+
+def _delegate_op(numpy_op):
+    """Decorator to apply a numpy operation to self.data and return an instance of self.__class__."""
+    def wrapper(self, other):
+        other_data = other.data if isinstance(other, SimpleMatrix) else other
+        result = numpy_op(self.data, other_data)
+        return self.__class__(result)
+    return wrapper
+
 class SimpleMatrix:
-    def __init__(self, mat: np.matrix, precision: int = 2):
-        self.data = mat
+    def __init__(self, mat, precision: int = 2):
+        self.data = np.matrix(mat)
         self.precision = precision
     
     def _entry_str(self, i, j):
@@ -55,19 +64,59 @@ class SimpleMatrix:
             ret = ret[:-self.precision] + " " * self.precision
         return ret
     
+    def __getitem__(self, key):
+        return self.data[key]
+
+    def __setitem__(self, key, value):
+        self.data[key] = value
+
+    def __getattr__(self, attr):
+        """Catch undefined attributes and delegate to self.data"""
+
+        result = getattr(self.data, attr)
+        return self.__class__(result) if isinstance(result, np.ndarray) else result
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        """
+        Enable combining SimpleMatrix with numpy arrays in expressions like adding
+        """
+        inputs = tuple(i.data if isinstance(i, SimpleMatrix) else i for i in inputs)
+        result = getattr(ufunc, method)(*inputs, **kwargs)
+        return self.__class__(result) if isinstance(result, np.ndarray) else result
+    
+    __add__ = _delegate_op(operator.add)
+    __radd__ = _delegate_op(operator.add)
+    __sub__ = _delegate_op(operator.sub)
+    __rsub__ = _delegate_op(operator.sub)
+    __mul__ = _delegate_op(operator.mul)
+    __rmul__ = _delegate_op(operator.mul)
+    __truediv__ = _delegate_op(operator.truediv)
+    __rtruediv__ = _delegate_op(operator.truediv)
+
     def __str__(self):
-        width, height = self.data.shape
+        height, width = self.data.shape
         def row(i):
             return " ".join(self._entry_str(i, j) for j in range(0, width))
         return "\n".join(row(i) for i in range(0, height))
     
     def __repr__(self):
         return self.__str__()
-
-
-class SimpleChoiMatrix(SimpleMatrix):
+    
+    @property
+    def eigs(self):
+        return SimpleMatrix(np.linalg.eigvals(self.data))
+    
+class SimpleSymmMatrix(SimpleMatrix):
     def __init__(self, mat: np.matrix, precision: int = 2):
         SimpleMatrix.__init__(self, mat, precision)
+
+    @property
+    def eigs(self):
+        return SimpleMatrix(np.linalg.eigvalsh(self.data))
+
+class SimpleChoiMatrix(SimpleSymmMatrix):
+    def __init__(self, mat: np.matrix, precision: int = 2):
+        SimpleSymmMatrix.__init__(self, mat, precision)
         self.n = int(mat.shape[0] ** 0.5)
     
     def __str__(self):
@@ -87,7 +136,7 @@ def compress(matrix: SimpleChoiMatrix):
     Obtains the matrix A, defined as A_ij = matrix_{i * n + i, j * n + j}
     """
 
-    if not(matrix is SimpleChoiMatrix):
+    if not(isinstance(matrix, SimpleChoiMatrix)):
         raise ValueError("compress() expects a Choi (n^2 by n^2) matrix")
     
     n = matrix.n
