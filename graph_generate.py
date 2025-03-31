@@ -8,6 +8,7 @@ class Graph:
         self._adj_list = adj_list
         self._n = len(adj_list)
 
+    @property
     def n(self) -> int:
         return self._n
 
@@ -29,10 +30,11 @@ class Graph:
                     edge_complement.append([i,j])
         return edge, edge_complement
     
-    def is_subgraph_of(self, other: Graph):
+    def is_subgraph_of(self, other: Graph) -> bool:
         if self._n != other._n:
             return False
         
+        # Check for each vertex, the neighbor list is a subset of the corresponding neighbor list in other
         for i in range(self._n):
             if not(all(neighbor in other._adj_list[i] for neighbor in self._adj_list[i])):
                 return False
@@ -47,7 +49,7 @@ def cycle(n: int) -> Graph:
     if n < 3:
         return complete(n)
 
-    adj_list = {i: [(i + 1) % n, (i - 1) % n] for i in range(n)}
+    adj_list = { i: [(i + 1) % n, (i - 1) % n] for i in range(n) }
     return Graph(adj_list)
 
 def line(n: int) -> Graph:
