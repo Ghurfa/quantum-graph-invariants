@@ -141,3 +141,20 @@ def compress(matrix: SimpleChoiMatrix):
     
     n = matrix.n
     return SimpleMatrix(np.matrix([[matrix[i * n + i, j * n + j] for j in range(0, n)] for i in range(0, n)]))
+
+def rand_uni(n):
+    """
+    Generates an n x n random matrix with Gaussian-distributed entries (clipped to [0,1])
+    and then orthonormalizes its columns using the Gram-Schmidt process to form a unitary matrix.
+    """
+    X = np.random.normal(loc=0, scale=1, size=(n, n))
+    
+    Q = np.zeros_like(X)
+    for i in range(X.shape[1]):
+        q = X[:, i].copy() 
+        for j in range(i):
+            q -= np.dot(Q[:, j], X[:, i]) * Q[:, j]
+        q /= np.linalg.norm(q)
+        Q[:, i] = q
+        
+    return Q
