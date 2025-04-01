@@ -1,11 +1,13 @@
 import numpy as np
-import picos
+import random
 from typing import *
-import invariant_implementation as ii
+
+import invariant_implementations as ii
 import graph_generate as gg
 import matrix_manip as mm
 import subspace as ss
-from invariant_implementation import *
+
+from invariant_implementations import *
 
 # No I've never heard of for loops/lists
 k1 = c1 = l1 = i1 = gg.complete(1)
@@ -23,10 +25,34 @@ g = gg.from_edge_list(4, (0, 1), (0, 2), (1, 2), (2, 3))
 l2sg = gg.from_edge_list(4, (2, 3))
 l2sg_alt = gg.from_edge_list(4, (1, 2))
 
-lov_theta_indcp(c5)
-
-lam_1, X_1 = lov_theta_relative(g, l2sg)
-lam_2, X_2 = lov_theta_relative(g, l2sg_alt)
+lam_1, X_1 = lt_relative(g, l2sg)
+lam_2, X_2 = lt_relative(g, l2sg_alt)
 
 print(round(lam_1 - lam_2, 3) == 0) # Different!!
 l2s3 = gg.from_edge_list(3, (0, 1))
+    
+s1 = ss.Subspace(2)
+s1.basis = [
+    np.array([[1, -1], [-1, 0]]),
+    np.array([[0, 1], [1, 1]])
+]
+s1.constraints = [
+    np.array([[0, 1], [-1, 0]]),
+    np.array([[2, 1], [1, -2]])
+]
+
+s2 = ss.Subspace(2)
+s2.basis = [np.array([[1, 0], [0, 1]])]
+s2.constraints = [
+    np.array([[1, 0], [0, -1]]),
+    np.array([[0, 1], [0, 0]]),
+    np.array([[0, 0], [1, 0]])
+]
+
+s1pps2 = ss.Subspace(2)
+s1pps2.basis = s1.constraints + s2.basis
+s1pps2.constraints = [np.array([[-1, 2], [2, 1]])]
+
+indcp, X = ind_cp(s1, s2)
+lt, Y = lt_general(s1pps2)
+print(indcp, X, lt, Y, sep='\n')

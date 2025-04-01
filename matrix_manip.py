@@ -51,7 +51,7 @@ def _delegate_op(numpy_op):
 
 class SimpleMatrix:
     def __init__(self, mat, precision: int = 2):
-        self.data = np.matrix(mat)
+        self.data = np.array(mat)
         self.precision = precision
     
     def _entry_str(self, i, j):
@@ -107,7 +107,7 @@ class SimpleMatrix:
         return SimpleMatrix(np.linalg.eigvals(self.data))
     
 class SimpleSymmMatrix(SimpleMatrix):
-    def __init__(self, mat: np.matrix, precision: int = 2):
+    def __init__(self, mat: np.ndarray, precision: int = 2):
         SimpleMatrix.__init__(self, mat, precision)
 
     @property
@@ -115,7 +115,7 @@ class SimpleSymmMatrix(SimpleMatrix):
         return SimpleMatrix(np.linalg.eigvalsh(self.data))
 
 class SimpleChoiMatrix(SimpleSymmMatrix):
-    def __init__(self, mat: np.matrix, precision: int = 2):
+    def __init__(self, mat: np.ndarray, precision: int = 2):
         SimpleSymmMatrix.__init__(self, mat, precision)
         self.n = int(mat.shape[0] ** 0.5)
     
@@ -140,7 +140,7 @@ def compress(matrix: SimpleChoiMatrix):
         raise ValueError("compress() expects a Choi (n^2 by n^2) matrix")
     
     n = matrix.n
-    return SimpleMatrix(np.matrix([[matrix[i * n + i, j * n + j] for j in range(0, n)] for i in range(0, n)]))
+    return SimpleMatrix(np.array([[matrix[i * n + i, j * n + j] for j in range(0, n)] for i in range(0, n)]))
 
 def rand_uni(n):
     """

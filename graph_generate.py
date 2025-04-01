@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 from typing import *
+import random as rand
 
 class Graph:
     def __init__(self, adj_list: Dict[int, List[int]]):
@@ -11,6 +12,19 @@ class Graph:
     @property
     def n(self) -> int:
         return self._n
+    
+    @property
+    def compl(self) -> Graph:
+        n = self.n
+        return Graph({i: list(set(range(n)) - set(self._adj_list[i])) for i in range(n)})
+    
+    def __sub__(self, other: Graph) -> Graph:
+        if not(other.is_subgraph_of(self)):
+            raise ValueError("Not a subgraph; cannot subtract")
+        
+        n = self.n
+        return Graph({i: list(set(self._adj_list[i]) - set(other._adj_list[i])) for i in range(n)})
+
 
     def edges(self) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]:
         """
@@ -82,7 +96,7 @@ def independent(n: int) -> Graph:
     adj_list = { i: [] for i in range(n)}
     return Graph(adj_list)
 
-def from_edge_list(n, *edge_list: List[Tuple[int, int]]):
+def from_edge_list(n: int, *edge_list: List[Tuple[int, int]]) -> Graph:
     """
     Creates a graph with the given number of nodes and edge list
 
@@ -93,3 +107,16 @@ def from_edge_list(n, *edge_list: List[Tuple[int, int]]):
         adj_list[i].append(j)
         adj_list[j].append(i)
     return Graph(adj_list)
+
+def random(n: int, density: float) -> Graph:
+    """
+    Generate a random graph with the given density
+    """
+
+    edge_list = []
+    for i in range(n):
+        for j in range(i + 1, n):
+            if rand.random() < density:
+                edge_list.append((i, j))
+    
+    return from_edge_list(n, edge_list)
