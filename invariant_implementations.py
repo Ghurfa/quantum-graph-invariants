@@ -12,7 +12,7 @@ lam_precision = 4
 
 def lt_general(subspace: Subspace) -> Tuple[float, SimpleSymmMatrix]:
     """
-    Calculates min{max_i{A_ii : A in S, A - J_n is PSD }}
+    Calculates min{ max_i{A_ii : A in S, A - J_n is PSD }}
 
     SDP:
     Minimize t + 1 such that
@@ -45,7 +45,7 @@ def lt_general(subspace: Subspace) -> Tuple[float, SimpleSymmMatrix]:
 
 def lt(graph: Graph) -> Tuple[float, SimpleSymmMatrix]:
     """
-    Calculate the Lovasz Theta number of a graph using SDP. Also returns the witness
+    Calculate the Lovasz Theta number of a graph. Also returns the witness
 
     SDP:
     Minimize t such that
@@ -70,7 +70,6 @@ def ind_cp(s1: Subspace, s2: Subspace) -> Tuple[float, SimpleSymmMatrix]:
 
     SDP modified from the one given in prop 4.1
     """
-    
     
     s1.ensure_valid()
     s2.ensure_valid()
