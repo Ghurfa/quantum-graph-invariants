@@ -1,7 +1,10 @@
 from __future__ import annotations
 import numpy as np
+import random
 from typing import *
+
 from graph_generate import Graph
+
 
 class Subspace:
     def __init__(self, n: int):
@@ -14,10 +17,7 @@ class Subspace:
         return self._n
     
     def contains(self, mat: np.array) -> bool:
-        if mat.shape != (self._n, self._n):
-            return False
-        
-        return all(np.trace(mat @ constraint.T) == 0 for constraint in self.constraints)
+        return not(is_independent(mat, self.basis))
 
     def is_subspace_of(self, other: Subspace) -> bool:
         if self._n != other._n:
@@ -63,14 +63,6 @@ class Subspace:
                     break
             else:
                 raise ValueError("Basis missing adjoint of basis vector (S is probably not closed under adjoint)")
-        
-
-def gen_rand(num_constraints: int) -> Subspace:
-    """
-    Generate a subspace with k constraints. 
-    """
-
-    raise NotImplementedError()
 
 def mn(n: int) -> Subspace:
     """
@@ -141,3 +133,95 @@ def eg(graph: Graph) -> Subspace:
         ret.constraints.append(mat)
     
     return ret
+
+def is_independent(new_matrix, basis):
+    """
+    Checks if new_matrix is linearly independent from the basis
+    """
+    if not basis:
+        return True
+    
+    flattened_basis = [mat.flatten() for mat in basis]
+    flattened_new = new_matrix.flatten()
+    
+    matrix_stack = np.vstack(flattened_basis + [flattened_new])
+    rank_before = np.linalg.matrix_rank(np.vstack(flattened_basis))
+    rank_after = np.linalg.matrix_rank(matrix_stack)
+    
+    return rank_after > rank_before
+
+def random_basis(n: int, low=-10, high=10, density=0.3) -> List[np.ndarray]:
+    """
+    Generates a randomized basis for M_n
+    """
+
+    basis = [np.identity(n)]
+    num_nonzero = max(1, int(density * n * n))
+    
+    while len(basis) < n * n:
+        matrix = np.zeros((n, n), dtype=int)
+        indices = np.random.choice(n * n, num_nonzero, replace=False)
+        for index in indices:
+            i, j = divmod(index, n)
+            matrix[i, j] = np.random.randint(low, high + 1)
+        
+        if is_independent(matrix, basis):
+            if not(is_independent(matrix.conj().T, basis + [matrix])):
+                matrix = matrix + matrix.conj().T
+                if is_independent(matrix, basis):
+                    basis.append(matrix)
+            else:
+                basis.append(matrix)
+                basis.append(matrix.conj().T)
+    
+    return basis
+
+def random_s1_s2(n: int, low=-10, high=10, density=0.3) -> Tuple[Subspace, Subspace, Subspace]:
+    """
+    Generates random subspaces S1 and S2 such that I_n \in S_2 \subseteq S1 \subseteq M_n.
+
+    Returns S1, S2, and S1^perp + S2
+    """
+
+    # Start with a randomized basis for M_n. Assume basis[0] = I_n
+    starting_basis = random_basis(n, low, high, density)
+
+    # For each basis vector pair (A, A*), remove A* (will be added back later)
+    bvecs = [starting_basis.pop(0)]
+    while len(starting_basis) > 0:
+        bvec = starting_basis.pop()
+        if (len(starting_basis) > 0) and np.array_equal(bvec.conj().T, starting_basis[-1]):
+            starting_basis.pop()
+        bvecs.append(bvec)
+    
+    random.shuffle(bvecs[1:])
+
+    # Partition basis vectors. S2 will be formed from matrices 0 to a (exclusive)
+    # +1 and -1 are temporary because cvxopt is being weird when s1 = s2
+    a = random.randint(1, len(bvecs) - 1)
+    b = random.randint(a + 1, len(bvecs))
+
+    def extract_basis(start, stop) -> List[np.ndarray]:
+        ret = []
+        for i in range(start, stop):
+            bvec = bvecs[i]
+            if np.array_equal(bvec, bvec.conj().T):
+                ret.append(bvec)
+            else:
+                ret.append(bvec)
+                ret.append(bvec.conj().T)
+        return ret
+
+    s2 = Subspace(n)
+    s2.basis = extract_basis(0, a)
+    s2.constraints = extract_basis(a, len(bvecs))
+
+    s1 = Subspace(n)
+    s1.basis = extract_basis(0, b)
+    s1.constraints = extract_basis(b, len(bvecs))
+
+    s1pps2 = Subspace(n)
+    s1pps2.basis = s2.basis + s1.constraints
+    s1pps2.constraints = extract_basis(a, b)
+
+    return s1, s2, s1pps2
