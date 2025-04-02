@@ -1,5 +1,4 @@
 from __future__ import annotations
-from functools import reduce
 import numpy as np
 from typing import *
 
@@ -65,6 +64,15 @@ class Subspace:
                     break
             else:
                 raise ValueError("Basis missing adjoint of basis vector (S is probably not closed under adjoint)")
+            
+    def __str__(self):
+        ret = "BASIS:\n" + "\n\n".join(str(mm.SimpleMatrix(bvec, 0)) for bvec in self.basis) + \
+              "\n\nCONSTRAINTS:\n" + "\n\n".join(str(mm.SimpleMatrix(const, 0)) for const in self.constraints)
+        return ret
+    
+    def __repr__(self):
+        return self.__str__()
+            
 
 def mn(n: int) -> Subspace:
     """
@@ -165,9 +173,6 @@ def orthogonalize(matrix: np.ndarray, basis: List[np.ndarray]) -> np.ndarray:
         mat_gcd = np.gcd.reduce(matrix, axis=(0, 1))
         matrix //= mat_gcd
 
-    if matrix[0, 0] == 130:
-        x = 2
-        pass
     mat_gcd = np.gcd.reduce(matrix, axis=(0, 1))
     return matrix // mat_gcd
 

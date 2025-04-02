@@ -1,14 +1,12 @@
-import numpy as np
-import picos
 from typing import *
-import graph_generate as gg
-from graph_generate import Graph
-import matrix_manip as mm
-from matrix_manip import SimpleMatrix, SimpleSymmMatrix, SimpleChoiMatrix
-from subspace import Subspace
-import subspace as ss
 
-lam_precision = 4
+import invariant_implementations_cvxpy
+import subspace as ss
+from matrix_manip import SimpleSymmMatrix, SimpleChoiMatrix
+from graph_generate import Graph
+from subspace import Subspace
+# import invariant_implementations_picos
+
 
 def lt_general(subspace: Subspace) -> Tuple[float, SimpleSymmMatrix]:
     """
@@ -21,44 +19,10 @@ def lt_general(subspace: Subspace) -> Tuple[float, SimpleSymmMatrix]:
     3. Y is a PSD n by n matrix
     """
 
-    n = subspace.n
+    subspace.ensure_valid()
+    return invariant_implementations_cvxpy.lt_general(subspace)
 
-    Y = picos.SymmetricVariable("Y", (n, n))
-    t = picos.RealVariable("t")
-
-    prob = picos.Problem()
-    prob.objective = "min", t
-
-    # Constraint 1
-    for constraint in subspace.constraints:
-        prob.add_constraint(((Y + np.ones([n, n])) | constraint) == 0)
-
-    # Constraint 2
-    for i in range(n):
-        prob.add_constraint(Y[i, i] <= t)
-
-    # Constraint 3
-    prob.add_constraint(Y >> 0)
-
-    prob.solve(solver="cvxopt")
-    return round(1 + t.value, lam_precision), SimpleSymmMatrix(np.array(Y.value))
-
-def lt(graph: Graph) -> Tuple[float, SimpleSymmMatrix]:
-    """
-    Calculate the Lovasz Theta number of a graph. Also returns the witness
-
-    SDP:
-    Minimize t such that
-    1. y_ij = -1        if not (i ~ j)
-    2. y_ii = t - 1     for i from 1 to n
-    3. Y is a PSD n by n matrix
-
-    SDP taken from Theorem 3.6.1 in "Approximation Algorithms and Semidefinite Programming" by G\"artner and Matousek
-    """
-
-    return lt_general(ss.eg(graph))
-
-def ind_cp(s1: Subspace, s2: Subspace) -> Tuple[float, SimpleSymmMatrix]:
+def ind_cp(s1: Subspace, s2: Subspace) -> Tuple[float, SimpleChoiMatrix]:
     """
     Computes Ind_CP(S1 : S2) 
 
@@ -76,28 +40,27 @@ def ind_cp(s1: Subspace, s2: Subspace) -> Tuple[float, SimpleSymmMatrix]:
     if not(s2.is_subspace_of(s1)):
         raise ValueError("S2 is not a sub-operator system of S1")
     
-    n = s1.n
+    return invariant_implementations_cvxpy.ind_cp(s1, s2)
 
-    X = picos.SymmetricVariable("X", (n*n, n*n))    # This should be a hermitian variable but cvxopt is crashing when you change it
-    lam = picos.RealVariable("lambda")
+def lt_quantum(subspace: Subspace) -> Tuple[float, SimpleChoiMatrix]:
+    """
+    Computes Quantum Lovasz Theta (Duan et al.) of the given subspace
 
-    prob = picos.Problem()
-    prob.objective = "max", lam
+    SDP:
+    Maximize lam such that
+    1. (id (x) tr)(X) = (1 - lam)(I_n)
+    2. X + lam * delta_matrix_n \in (S1 (x) S2) + (S1^perp (x) M_n)
+    3. X is a PSD n^2 by n^2 matrix
 
-    # Constraint 1
-    prob.add_constraint(X.partial_trace(subsystems=0, dimensions=n) == (1 - lam) * np.identity(n))
-
-    # Constraint 2
-    for s1_bvec in s1.basis:
-        for s2_p_bvec in s2.constraints:
-            constraint = np.kron(s1_bvec, s2_p_bvec)
-            prob.add_constraint((X + lam * mm.delta_matrix(n) | constraint) == 0)
+    SDP taken from prop 4.8 of Araiza et al. As noted there, this is the same as
+    ind_cp except for swapping id and tr in constraint 1
+    """
     
-    # Constraint 3 
-    prob.add_constraint(X >> 0)
+    subspace.ensure_valid()
+    return invariant_implementations_cvxpy.lt_quantum(subspace)
 
-    prob.solve(solver="cvxopt")
-    return round(1 / lam.value, lam_precision), SimpleChoiMatrix(np.array(X.value))
+def lt(graph: Graph) -> Tuple[float, SimpleSymmMatrix]:
+    return lt_general(ss.eg(graph))
 
 def lt_indcp(graph: Graph) -> Tuple[float, SimpleSymmMatrix]:
     return ind_cp(ss.mn(graph.n), ss.sg(graph))
