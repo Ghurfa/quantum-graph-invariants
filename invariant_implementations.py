@@ -1,69 +1,85 @@
+import cvxpy
+import numpy as np
 from typing import *
 
-import invariant_implementations_cvxpy
-import subspace as ss
+import matrix_manip as mm
 from matrix_manip import SimpleSymmMatrix, SimpleChoiMatrix
-from graph_generate import Graph
 from subspace import Subspace
-# import invariant_implementations_picos
 
+lam_precision = 3
 
 def lt_general(subspace: Subspace) -> Tuple[float, SimpleSymmMatrix]:
-    """
-    Calculates min{ max_i{A_ii : A in S, A - J_n is PSD }}
+    n = subspace.n
 
-    SDP:
-    Minimize t + 1 such that
-    1. Y + J_n in S
-    2. Y_ii <= t
-    3. Y is a PSD n by n matrix
-    """
+    Y = cvxpy.Variable((n, n), symmetric=True)
+    t = cvxpy.Variable(1)
 
-    subspace.ensure_valid()
-    return invariant_implementations_cvxpy.lt_general(subspace)
+    constraints = [Y >> 0]  # Constraint 3
 
-def ind_cp(s1: Subspace, s2: Subspace) -> Tuple[float, SimpleChoiMatrix]:
+    # Constraint 1
+    for constraint in subspace.constraints:
+        constraints.append(cvxpy.trace((Y + np.ones([n, n])) @ constraint) == 0)
+
+    # Constraint 2
+    for i in range(n):
+        constraints.append(Y[i, i] <= t)
+
+    prob = cvxpy.Problem(cvxpy.Minimize(t), constraints)
+    prob.solve()
+    return round(1 + float(t.value), lam_precision), SimpleSymmMatrix(np.array(Y.value))
+
+def araiza_4_1(s1: Subspace, s2: Subspace, pt_axis: int) -> Tuple[float, SimpleChoiMatrix]: 
     """
-    Computes Ind_CP(S1 : S2) 
+    Computes either the SDP in Prop 4.1 (gives Ind_CP(S1 : S2)) or the SDP in Prop 4.8
+    (gives quantum Lovasz Theta). They differ only by the axis of the partial trace in constraint 1.
+    pt_axis = 0 is Ind_CP and pt_axis = 1 is QLT (I think)
 
     SDP:
     Maximize lam such that
-    1. (tr (x) id)(X) = (1 - lam)(I_n)
+    1. (tr (x) id)(X) = (1 - lam)(I_n)              or          (id (x) tr)(X) = (1 - lam)(I_n)
     2. X + lam * delta_matrix_n \in (S1 (x) S2) + (S1^perp (x) M_n)
     3. X is a PSD n^2 by n^2 matrix
 
     SDP modified from the one given in prop 4.1
     """
+
+    n = s1.n
+
+    X = cvxpy.Variable((n * n, n * n), symmetric=True)
+    lam = cvxpy.Variable(1)
+
+    constraints = [
+        cvxpy.partial_trace(X, (n, n), pt_axis) == (1 - lam) * np.identity(n),  # Constraint 1
+        X >> 0                                                                  # Constraint 3
+    ]
     
-    s1.ensure_valid()
-    s2.ensure_valid()
-    if not(s2.is_subspace_of(s1)):
-        raise ValueError("S2 is not a sub-operator system of S1")
+    # Constraint 2
+    for s1_bvec in s1.basis:
+        for s2_perp_bvec in s2.constraints:
+            constraint = np.kron(s1_bvec, s2_perp_bvec).conj().T
+            constraints.append(cvxpy.trace((X + lam * mm.delta_matrix(n)) @ constraint) == 0)
     
-    return invariant_implementations_cvxpy.ind_cp(s1, s2)
+    prob = cvxpy.Problem(cvxpy.Maximize(lam), constraints)
+    prob.solve()
+    return round(1 / float(lam.value), lam_precision), SimpleChoiMatrix(np.array(X.value))
 
-def lt_quantum(subspace: Subspace) -> Tuple[float, SimpleChoiMatrix]:
-    """
-    Computes Quantum Lovasz Theta (Duan et al.) of the given subspace
+def ind_cp_v2(s1: Subspace, s2: Subspace) -> Tuple[float, SimpleChoiMatrix]:    
+    n = s1.n
 
-    SDP:
-    Maximize lam such that
-    1. (id (x) tr)(X) = (1 - lam)(I_n)
-    2. X + lam * delta_matrix_n \in (S1 (x) S2) + (S1^perp (x) M_n)
-    3. X is a PSD n^2 by n^2 matrix
+    X = cvxpy.Variable((n * n, n * n), symmetric=True)
+    lam = cvxpy.Variable(1)
 
-    SDP taken from prop 4.8 of Araiza et al. As noted there, this is the same as
-    ind_cp except for swapping id and tr in constraint 1
-    """
+    constraints = [
+        cvxpy.partial_trace(X, (n, n), 0) == lam * np.identity(n),  # Constraint 1
+        X >> 0                                                      # Constraint 3
+    ]
     
-    subspace.ensure_valid()
-    return invariant_implementations_cvxpy.lt_quantum(subspace)
-
-def lt(graph: Graph) -> Tuple[float, SimpleSymmMatrix]:
-    return lt_general(ss.eg(graph))
-
-def lt_indcp(graph: Graph) -> Tuple[float, SimpleSymmMatrix]:
-    return ind_cp(ss.mn(graph.n), ss.sg(graph))
-
-def lt_relative(gamma: Graph, lam: Graph) -> Tuple[float, SimpleSymmMatrix]:
-    return ind_cp(ss.sg(gamma), ss.sg(lam))
+    # Constraint 2
+    for s1_bvec in s1.basis:
+        for s2_perp_bvec in s2.constraints:
+            constraint = np.kron(s1_bvec, s2_perp_bvec).conj().T
+            constraints.append(cvxpy.trace((X + mm.delta_matrix(n)) @ constraint) == 0)
+    
+    prob = cvxpy.Problem(cvxpy.Minimize(lam), constraints)
+    prob.solve()
+    return 1 + round(float(lam.value), lam_precision), SimpleChoiMatrix(np.array(X.value))

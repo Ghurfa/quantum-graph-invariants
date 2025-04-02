@@ -23,7 +23,7 @@ class Subspace:
         ret.basis = self.constraints
         return ret
     
-    def contains(self, mat: np.array) -> bool:
+    def contains(self, mat: np.ndarray) -> bool:
         return not(is_independent(mat, self.basis))
 
     def is_subspace_of(self, other: Subspace) -> bool:
@@ -35,8 +35,8 @@ class Subspace:
     def ensure_valid(self):
         """
         Checks whether the subspace is a valid matricial system, i.e. that self.basis and self.constraints
-        are linearly independent sets, that the constraints form a basis for S^perp, and that it is closed
-        under taking the adjoint
+        are linearly independent sets, that the constraints form a basis for S^perp, and that it constains
+        the identity & is closed under taking the adjoint
         """
 
         n = self.n
@@ -50,12 +50,8 @@ class Subspace:
         super_space = Subspace(n)
         super_space.basis = self.basis + self.constraints
 
-        for i in range(n):
-            for j in range(n):
-                mat = np.zeros([n, n])
-                mat[i, j] = 1
-                if not(super_space.contains(mat)):
-                    raise ValueError("Basis or constraints are incomplete (S + S^perp != M_n)")
+        if not(mn(n).is_subspace_of(super_space)):
+            raise ValueError("Basis or constraints are incomplete (S + S^perp != M_n)")
         
         for bvec in self.basis:
             adjoint = bvec.conj().T
@@ -63,10 +59,10 @@ class Subspace:
                 if np.array_equal(adjoint, bvec_other) or np.array_equal(-adjoint, bvec_other):
                     break
             else:
-                raise ValueError("Basis missing adjoint of basis vector (S is probably not closed under adjoint)")
+                raise ValueError("Basis missing adjoint of basis vector (cannot verify closure under adjoint)")
             
     def __str__(self):
-        ret = "BASIS:\n" + "\n\n".join(str(mm.SimpleMatrix(bvec, 0)) for bvec in self.basis) + \
+        ret = "BASIS:\n" + "\n----------------\n".join(str(mm.SimpleMatrix(bvec, 0)) for bvec in self.basis) + \
               "\n\nCONSTRAINTS:\n" + "\n\n".join(str(mm.SimpleMatrix(const, 0)) for const in self.constraints)
         return ret
     
@@ -117,7 +113,7 @@ def eg(graph: Graph) -> Subspace:
     ret = Subspace(n)
     edges, non_edges = graph.edges()
     
-    ret.basis += np.identity(n)
+    ret.basis.append(np.identity(n))
     for i in range(1, n):
         mat = np.zeros([n, n])
         mat[0, 0] = 1
@@ -204,6 +200,8 @@ def random_basis(n: int, low=-10, high=10, density=0.3) -> List[np.ndarray]:
             basis.append(adjoint)
         else:
             matrix = matrix + adjoint
+            mat_gcd = np.gcd.reduce(matrix, axis=(0, 1))
+            matrix //= mat_gcd
             if is_h_ortho(matrix, basis):
                 basis.append(matrix)
     
@@ -229,10 +227,9 @@ def random_s1_s2(n: int, low=-10, high=10, density=0.3) -> Tuple[Subspace, Subsp
     
     np.random.shuffle(bvecs[1:])
 
-    # Partition basis vectors. S2 will be formed from matrices 0 to a (exclusive)
-    # +1 and -1 are temporary because cvxopt is being weird when s1 = s2 (and weird in general, ig)
-    a = np.random.randint(1, len(bvecs) - 1)
-    b = np.random.randint(a + 1, len(bvecs))
+    # Partition basis vectors. S2 will be formed from matrices 0 (inclusive) to a (exclusive)
+    a = np.random.randint(1, len(bvecs))
+    b = np.random.randint(a, len(bvecs))
 
     def extract_basis(start, stop) -> List[np.ndarray]:
         ret = []
