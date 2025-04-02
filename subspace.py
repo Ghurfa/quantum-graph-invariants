@@ -5,7 +5,6 @@ from typing import *
 from graph_generate import Graph
 import matrix_manip as mm
 
-
 class Subspace:
     def __init__(self, n: int):
         self._n = n
@@ -83,7 +82,6 @@ def mn(n: int) -> Subspace:
 
     return ret
 
-
 def sg(graph: Graph) -> Subspace:
     """
     Generate the subspace S_gamma, where not(i ~ j or i = j) implies X_ij = 0
@@ -128,10 +126,47 @@ def eg(graph: Graph) -> Subspace:
     
     return ret
 
+def from_basis(basis: List[np.ndarray]):
+    """
+    Creates a subspace with the given basis
+    """
+
+    n = basis[0].shape[0]
+    ret = Subspace(n)
+
+    basis_dim = len(basis)
+    complete_basis(basis)
+
+    ret.basis = basis[:basis_dim]
+    ret.constraints = basis[basis_dim:]
+
+    ret.ensure_valid()
+    return ret
+
+def from_constraints(constraints: List[np.ndarray]):
+    """
+    Creates a subspace with the given constraints
+    """
+
+    n = constraints[0].shape[0]
+    ret = Subspace(n)
+
+    constraints_dim = len(constraints)
+    complete_basis(constraints)
+
+    ret.constraints = constraints[:constraints_dim]
+    ret.basis = constraints[constraints_dim:]
+
+    ret.ensure_valid()
+    return ret
+
 def is_independent(matrix: np.ndarray, basis: List[np.ndarray]) -> bool:
     """
     Checks if matrix is linearly independent from the given basis
     """
+
+    if len(basis) == 0:
+        return True
 
     flattened_basis = [mat.flatten() for mat in basis]
     flattened_new = matrix.flatten()
@@ -172,20 +207,19 @@ def orthogonalize(matrix: np.ndarray, basis: List[np.ndarray]) -> np.ndarray:
     mat_gcd = np.gcd.reduce(matrix, axis=(0, 1))
     return matrix // mat_gcd
 
-def random_basis(n: int, low=-10, high=10, density=0.3) -> List[np.ndarray]:
+def complete_basis(basis: List[np.ndarray], mat_src: Iterator[np.ndarray] = None):
     """
-    Generates a randomized basis for M_n
+    Starting with the given nonempty basis, extends it in-place by taking matrices from mat_src
+    and orthogonalizing them. If mat_src is unspecified, then we use the standard basis for M_n
     """
 
-    basis = [np.identity(n).astype(int)]
-    num_nonzero = max(1, int(density * n * n))
+    n = basis[0].shape[0]
+
+    if not(mat_src):
+        mat_src = iter(mn(n).basis)
     
     while len(basis) < n * n:
-        matrix = np.zeros((n, n), dtype=int)
-        indices = np.random.choice(n * n, num_nonzero, replace=False)
-        for index in indices:
-            i, j = divmod(index, n)
-            matrix[i, j] = np.random.randint(low, high + 1)
+        matrix = next(mat_src)
 
         if not(is_independent(matrix, basis)):   # Regenerate if matrix is in span of basis already
             continue
@@ -204,7 +238,26 @@ def random_basis(n: int, low=-10, high=10, density=0.3) -> List[np.ndarray]:
             matrix //= mat_gcd
             if is_h_ortho(matrix, basis):
                 basis.append(matrix)
+
+def random_basis(n: int, low=-10, high=10, density=0.3) -> List[np.ndarray]:
+    """
+    Generates a randomized basis for M_n
+    """
+
+    basis = [np.identity(n).astype(int)]
+    num_nonzero = max(1, int(density * n * n))
     
+    def rand_mat_src() -> Iterator[np.ndarray]:
+        while True:
+            matrix = np.zeros((n, n), dtype=int)
+            indices = np.random.choice(n * n, num_nonzero, replace=False)
+            for index in indices:
+                i, j = divmod(index, n)
+                matrix[i, j] = np.random.randint(low, high + 1)
+            
+            yield matrix
+    
+    complete_basis(basis, rand_mat_src())
     return basis
 
 def random_s1_s2(n: int, low=-10, high=10, density=0.3) -> Tuple[Subspace, Subspace, Subspace]:

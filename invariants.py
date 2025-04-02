@@ -9,18 +9,16 @@ from subspace import Subspace
 def lt_general(subspace: Subspace) -> Tuple[float, SimpleSymmMatrix]:
     """
     Calculates min{ max_i{A_ii : A in S, A - J_n is PSD }}
-
-    SDP:
-    Minimize t + 1 such that
-    1. Y + J_n in S
-    2. Y_ii <= t
-    3. Y is a PSD n by n matrix
     """
 
     subspace.ensure_valid()
     return invariant_implementations.lt_general(subspace)
 
 def ind_cp(s1: Subspace, s2: Subspace) -> Tuple[float, SimpleChoiMatrix]:
+    """
+    Computes Ind_CP(S1 : S2) (Araiza et al.) of the given subspaces
+    """
+
     s1.ensure_valid()
     s2.ensure_valid()
     if not(s2.is_subspace_of(s1)):
@@ -31,17 +29,8 @@ def ind_cp(s1: Subspace, s2: Subspace) -> Tuple[float, SimpleChoiMatrix]:
 def lt_quantum(subspace: Subspace) -> Tuple[float, SimpleChoiMatrix]:
     """
     Computes Quantum Lovasz Theta (Duan et al.) of the given subspace
-
-    SDP:
-    Maximize lam such that
-    1. (id (x) tr)(X) = (1 - lam)(I_n)
-    2. X + lam * delta_matrix_n \in (S1 (x) S2) + (S1^perp (x) M_n)
-    3. X is a PSD n^2 by n^2 matrix
-
-    SDP taken from prop 4.8 of Araiza et al. As noted there, this is the same as
-    ind_cp except for swapping id and tr in constraint 1
     """
-    
+
     subspace.ensure_valid()
     return invariant_implementations.araiza_4_1(ss.mn(subspace.n), subspace, 1)
 

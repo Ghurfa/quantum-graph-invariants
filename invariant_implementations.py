@@ -6,9 +6,19 @@ import matrix_manip as mm
 from matrix_manip import SimpleSymmMatrix, SimpleChoiMatrix
 from subspace import Subspace
 
-lam_precision = 3
+lam_precision = 4
 
 def lt_general(subspace: Subspace) -> Tuple[float, SimpleSymmMatrix]:
+    """
+    Calculates min{ max_i{A_ii : A in S, A - J_n is PSD }}
+
+    SDP:
+    Minimize t + 1 such that
+    1. Y + J_n in S
+    2. Y_ii <= t
+    3. Y is a PSD n by n matrix
+    """
+
     n = subspace.n
 
     Y = cvxpy.Variable((n, n), symmetric=True)

@@ -10,7 +10,7 @@ def e_matrix(n: int, i: int, j: int):
     Creates a matrix that is all zeroes except for a one at (i, j)
     """
 
-    E = np.zeros((n,n))
+    E = np.zeros((n,n), dtype=int)
     E[i, j] = 1
     return E
 
@@ -19,7 +19,7 @@ def delta_matrix(n: int):
     Creates a matrix that is the sum of (e (x) e) where e is each of the e-matrices of size n
     """
 
-    ret = np.zeros((n * n, n * n))
+    ret = np.zeros((n * n, n * n), dtype=int)
     for i in range(n):
         for j in range(n):
             ret[i * n + i, j * n + j] = 1
@@ -32,8 +32,8 @@ def adjacency_matrix(graph: Graph):
 
     n = graph._n
     edges, nonedges = graph.edges
-    E = np.zeros((n, n))
-    E_complement = np.zeros((n, n))
+    E = np.zeros((n, n), dtype=int)
+    E_complement = np.zeros((n, n), dtype=int)
     for x in edges:
         E[x[0], x[1]] = 1
     for x in nonedges:

@@ -39,14 +39,14 @@ def test_indcp_qlt_equality():
                 break
 
 def indcp_qlt_equality_counterexample():
-    quantum_graph = Subspace(3)
-    quantum_graph.basis = None
-    quantum_graph.constraints = [np.array([[2, -1, 0],
-                                  [-1, -1, 0],
-                                  [0, 0 ,-1]])]
-    # space.constraints = [np.array([[2, -3, -3],
-    #                               [-3, -1, 0],
-    #                               [-3, 0 ,-1]])]
+    # quantum_graph = ss.from_constraints([np.array([
+    #     [2, -1, 0],
+    #     [-1, -1, 0],
+    #     [0, 0 ,-1]])])
+    quantum_graph = ss.from_constraints([np.array([
+        [2, -3, -3],
+        [-3, -1, 0],
+        [-3, 0 ,-1]])])
 
     indcp, X = ind_cp(ss.mn(3), quantum_graph)
     qlt, Y = lt_quantum(quantum_graph)
@@ -56,5 +56,3 @@ def indcp_qlt_equality_counterexample():
     print("Ind_CP Witness:", X, sep='\n')
     print("Quantum LT Value:", qlt)
     print("Quantum LT Witness:", Y, sep='\n')
-
-indcp_qlt_equality_counterexample()
