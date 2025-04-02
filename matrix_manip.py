@@ -5,7 +5,7 @@ import numpy as np
 from typing import *
 from graph_generate import Graph
 
-def e_matrix(n: int, i: int, j: int):
+def e_matrix(n: int, i: int, j: int) -> np.ndarray:
     """
     Creates a matrix that is all zeroes except for a one at (i, j)
     """
@@ -14,7 +14,7 @@ def e_matrix(n: int, i: int, j: int):
     E[i, j] = 1
     return E
 
-def delta_matrix(n: int):
+def delta_matrix(n: int) -> np.ndarray:
     """
     Creates a matrix that is the sum of (e (x) e) where e is each of the e-matrices of size n
     """
@@ -25,22 +25,7 @@ def delta_matrix(n: int):
             ret[i * n + i, j * n + j] = 1
     return ret
 
-def adjacency_matrix(graph: Graph):
-    """
-    Creates the adjacency matrix of a graph
-    """
-
-    n = graph._n
-    edges, nonedges = graph.edges
-    E = np.zeros((n, n), dtype=int)
-    E_complement = np.zeros((n, n), dtype=int)
-    for x in edges:
-        E[x[0], x[1]] = 1
-    for x in nonedges:
-        E_complement[x[0], x[1]] = 1
-    return E, E_complement
-
-def rand_uni(n):
+def rand_uni(n) -> np.ndarray:
     """
     Generates an n x n random matrix with Gaussian-distributed entries (clipped to [0,1])
     and then orthonormalizes its columns using the Gram-Schmidt process to form a unitary matrix.

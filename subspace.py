@@ -126,10 +126,27 @@ def eg(graph: Graph) -> Subspace:
     
     return ret
 
+def antilaplacian(graph: Graph) -> Subspace:
+    """
+    Creates the subspace whose orthogonal space is spanned by the matrix L - tr(L)/n * I_n
+    """
+    
+    n = graph.n
+
+    if all(len(graph.adj_list[i]) == 0 for i in range(n)):
+        return mn(n)
+
+    L = graph.laplacian_matrix
+    mat = L * n - np.identity(n).astype(int) * np.trace(L)
+    mat_gcd = np.gcd.reduce(mat, axis=(0, 1))
+    return from_constraints([mat // mat_gcd])
+
 def from_basis(basis: List[np.ndarray]):
     """
     Creates a subspace with the given basis
     """
+
+    validate_partial_basis(basis, True)
 
     n = basis[0].shape[0]
     ret = Subspace(n)
@@ -147,6 +164,8 @@ def from_constraints(constraints: List[np.ndarray]):
     """
     Creates a subspace with the given constraints
     """
+    
+    validate_partial_basis(constraints, False)
 
     n = constraints[0].shape[0]
     ret = Subspace(n)
@@ -159,6 +178,32 @@ def from_constraints(constraints: List[np.ndarray]):
 
     ret.ensure_valid()
     return ret
+
+def validate_partial_basis(basis: List[np.ndarray], incl_id: bool):
+    """
+    Checks that the given basis consists of matrices that are of the same size & are
+    nonzero & mutually orthogonal. Also either checks that identity is in their span
+    (if incl_id = True) or in their orthogonal space (if incl_id = False)
+    """
+
+    assert basis
+    
+    if len(basis) == 0:
+        assert not(incl_id)
+        return
+
+    shape = basis[0].shape
+    assert len(shape) == 2
+    n = shape[0]
+
+    assert all(bvec.shape == (n, n) for bvec in basis)
+    assert all(bvec.any() for bvec in basis)
+    assert all(any(np.array_equal(other, bvec.conj().T) or np.array_equal(-other, bvec.conj().T) for other in basis) for bvec in basis)
+    assert all(is_h_ortho(bvec, basis[:i]) for i, bvec in enumerate(basis))
+    if incl_id:
+        assert not(is_independent(np.identity(n).astype(int), basis))
+    else:
+        assert is_h_ortho(np.identity(n).astype(int), basis)
 
 def is_independent(matrix: np.ndarray, basis: List[np.ndarray]) -> bool:
     """
@@ -186,7 +231,7 @@ def is_h_ortho(matrix: np.ndarray, basis: List[np.ndarray]) -> bool:
 
 def orthogonalize(matrix: np.ndarray, basis: List[np.ndarray]) -> np.ndarray:
     """
-    Modifies (adjoint of) matrix to be orthogonal to the given basis while ensuring integer entries
+    Modifies (the adjoint of) the matrix to be orthogonal to the given basis while ensuring integer entries
     """
 
     for bvec in basis:
