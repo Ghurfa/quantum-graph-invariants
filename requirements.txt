@@ -1,104 +1,113 @@
-# This file may be used to create an environment using:
-# $ conda create --name <env> --file <this file>
-# platform: win-64
-# created-by: conda 24.11.1
-asttokens=3.0.0=pyhd8ed1ab_0
-backcall=0.2.0=pyh9f0ad1d_0
-blas=1.0=mkl
-brotli-python=1.1.0=py38hd3f51b4_1
-ca-certificates=2025.1.31=h56e8100_0
-certifi=2024.8.30=pyhd8ed1ab_0
-cffi=1.17.0=py38h4cb3324_0
-charset-normalizer=3.4.0=pyhd8ed1ab_0
-clarabel=0.7.1=py38hdc6c62d_0
-colorama=0.4.6=pyhd8ed1ab_0
-comm=0.2.2=pyhd8ed1ab_0
-cpython=3.8.20=py38hd8ed1ab_2
-cvxopt=1.2.6=py38h5e57b43_1
-cvxpy=1.5.3=py38haa244fe_0
-cvxpy-base=1.5.3=py38hb7c6f16_0
-debugpy=1.8.5=py38h2698bfa_0
-decorator=5.1.1=pyhd8ed1ab_0
-dsdp=5.8=h5e57b43_1
-ecos=2.0.14=py38haf47d59_0
-executing=2.1.0=pyhd8ed1ab_0
-fftw=3.3.9=h2bbff1b_2
-glpk=4.65=h2bbff1b_3
-gsl=2.7.1=h6051b90_1
-h2=4.1.0=pyhd8ed1ab_0
-hpack=4.0.0=pyh9f0ad1d_0
-hyperframe=6.0.1=pyhd8ed1ab_0
-idna=3.10=pyhd8ed1ab_0
-importlib-metadata=8.5.0=pyha770c72_0
-intel-openmp=2021.4.0=haa95532_3556
-ipykernel=6.29.5=pyh4bbf305_0
-ipython=8.12.2=pyh08f2357_0
-jedi=0.19.1=pyhd8ed1ab_0
-jupyter_client=8.6.3=pyhd8ed1ab_0
-jupyter_core=5.7.2=pyh5737063_1
-krb5=1.21.3=hdf4eb48_0
-libblas=3.9.0=1_h8933c1f_netlib
-libcblas=3.9.0=8_h719fc58_netlib
-libffi=3.4.4=hd77b12b_1
-liblapack=3.9.0=8_h719fc58_netlib
-libqdldl=0.1.7=h63175ca_0
-libsodium=1.0.18=h8d14728_1
-libzlib=1.3.1=h2466b09_2
-m2w64-gcc-libgfortran=5.3.0=6
-m2w64-gcc-libs=5.3.0=7
-m2w64-gcc-libs-core=5.3.0=7
-m2w64-gmp=6.1.0=2
-m2w64-libwinpthread-git=5.0.0.4634.697f757=2
-matplotlib-inline=0.1.7=pyhd8ed1ab_0
-mkl=2021.4.0=haa95532_640
-mkl-service=2.4.0=py38h2bbff1b_0
-mkl_fft=1.3.1=py38h277e83a_0
-mkl_random=1.2.2=py38hf11a4ad_0
-msys2-conda-epoch=20160418=1
-nest-asyncio=1.6.0=pyhd8ed1ab_0
-numpy=1.24.3=py38hf95b240_0
-numpy-base=1.24.3=py38h005ec55_0
-openssl=3.4.1=ha4e3fda_0
-osqp=0.6.2.post0=py38h5d928e2_3
-packaging=24.2=pyhd8ed1ab_2
-parso=0.8.4=pyhd8ed1ab_0
-pickleshare=0.7.5=py_1003
-picos=2.6.0=py38_0
-pip=24.2=py38haa95532_0
-platformdirs=4.3.6=pyhd8ed1ab_0
-pooch=1.8.2=pyhd8ed1ab_0
-prompt-toolkit=3.0.48=pyha770c72_0
-prompt_toolkit=3.0.48=hd8ed1ab_1
-psutil=6.0.0=py38h4cb3324_0
-pure_eval=0.2.3=pyhd8ed1ab_0
-pycparser=2.22=pyhd8ed1ab_0
-pygments=2.18.0=pyhd8ed1ab_0
-pysocks=1.7.1=pyh0701188_6
-python=3.8.20=h8205438_0
-python-dateutil=2.9.0=pyhd8ed1ab_0
-python_abi=3.8=2_cp38
-pywin32=306=py38hd3f51b4_2
-pyzmq=26.2.0=py38h3c56b06_0
-qdldl-python=0.1.7.post4=py38hb7c6f16_0
-requests=2.32.3=pyhd8ed1ab_0
-scipy=1.10.1=py38h1aea9ed_3
-scs=3.2.7=default_py38hafe1d95_0
-setuptools=75.1.0=py38haa95532_0
-six=1.16.0=pyhd3eb1b0_1
-sqlite=3.45.3=h2bbff1b_0
-stack_data=0.6.2=pyhd8ed1ab_0
-tornado=6.4.1=py38h4cb3324_0
-traitlets=5.14.3=pyhd8ed1ab_0
-typing_extensions=4.12.2=pyha770c72_0
-ucrt=10.0.22621.0=h57928b3_1
-urllib3=2.2.3=pyhd8ed1ab_0
-vc=14.42=haa95532_4
-vc14_runtime=14.42.34433=h6356254_24
-vs2015_runtime=14.42.34433=hfef2bbc_24
-wcwidth=0.2.13=pyhd8ed1ab_0
-wheel=0.44.0=py38haa95532_0
-win_inet_pton=1.1.0=pyh7428d3b_7
-zeromq=4.3.5=he1f189c_4
-zipp=3.21.0=pyhd8ed1ab_0
-zstandard=0.23.0=py38hf92978b_0
-zstd=1.5.6=h0ea2cb4_0
+name: qgi
+channels:
+  - defaults
+  - conda-forge
+  - https://repo.anaconda.com/pkgs/main
+  - https://repo.anaconda.com/pkgs/r
+  - https://repo.anaconda.com/pkgs/msys2
+dependencies:
+  - asttokens=3.0.0=pyhd8ed1ab_0
+  - backcall=0.2.0=pyh9f0ad1d_0
+  - blas=1.0=mkl
+  - brotli-python=1.0.9=py312h5da7b33_9
+  - bzip2=1.0.8=h2bbff1b_6
+  - ca-certificates=2025.2.25=haa95532_0
+  - certifi=2025.1.31=py312haa95532_0
+  - cffi=1.17.1=py312h827c3e9_1
+  - charset-normalizer=3.4.0=pyhd8ed1ab_0
+  - clarabel=0.10.0=py312hde1758a_0
+  - colorama=0.4.6=pyhd8ed1ab_0
+  - comm=0.2.2=pyhd8ed1ab_0
+  - cpython=3.12.9=py312hd8ed1ab_1
+  - cvxpy=1.6.4=py312h2e8e312_0
+  - cvxpy-base=1.6.4=py312h72972c8_0
+  - debugpy=1.8.11=py312h5da7b33_0
+  - decorator=5.1.1=pyhd8ed1ab_0
+  - ecos=2.0.12=py312he558020_0
+  - executing=2.1.0=pyhd8ed1ab_0
+  - h2=4.1.0=pyhd8ed1ab_0
+  - hpack=4.0.0=pyh9f0ad1d_0
+  - hyperframe=6.0.1=pyhd8ed1ab_0
+  - icc_rt=2022.1.0=h6049295_2
+  - idna=3.10=pyhd8ed1ab_0
+  - importlib-metadata=8.5.0=pyha770c72_0
+  - intel-openmp=2021.4.0=haa95532_3556
+  - ipykernel=6.29.5=pyh4bbf305_0
+  - ipython=8.12.2=pyh08f2357_0
+  - jedi=0.19.1=pyhd8ed1ab_0
+  - jupyter_client=8.6.3=pyhd8ed1ab_0
+  - jupyter_core=5.7.2=pyh5737063_1
+  - krb5=1.21.3=hdf4eb48_0
+  - libblas=3.9.0=1_h8933c1f_netlib
+  - libcblas=3.9.0=8_h719fc58_netlib
+  - libexpat=2.7.0=he0c23c2_0
+  - libffi=3.4.4=hd77b12b_1
+  - liblapack=3.9.0=8_h719fc58_netlib
+  - liblzma=5.8.1=h2466b09_0
+  - libosqp=0.6.3=hd77b12b_0
+  - libqdldl=0.1.7=h63175ca_0
+  - libsodium=1.0.18=h8d14728_1
+  - libsqlite=3.49.1=h67fdade_2
+  - libzlib=1.3.1=h2466b09_2
+  - m2w64-gcc-libgfortran=5.3.0=6
+  - m2w64-gcc-libs=5.3.0=7
+  - m2w64-gcc-libs-core=5.3.0=7
+  - m2w64-gmp=6.1.0=2
+  - m2w64-libwinpthread-git=5.0.0.4634.697f757=2
+  - matplotlib-inline=0.1.7=pyhd8ed1ab_0
+  - mkl=2023.2.0=h6a75c08_49573
+  - mkl-service=2.4.0=py312h827c3e9_2
+  - mkl_fft=1.3.11=py312h827c3e9_0
+  - mkl_random=1.2.8=py312h0158946_0
+  - msys2-conda-epoch=20160418=1
+  - nest-asyncio=1.6.0=pyhd8ed1ab_0
+  - numpy=1.26.4=py312hfd52020_0
+  - numpy-base=1.26.4=py312h4dde369_0
+  - openssl=3.4.1=ha4e3fda_0
+  - osqp=0.6.7.post3=py312h72972c8_1
+  - packaging=24.2=pyhd8ed1ab_2
+  - parso=0.8.4=pyhd8ed1ab_0
+  - pickleshare=0.7.5=py_1003
+  - pip=25.0=py312haa95532_0
+  - platformdirs=4.3.6=pyhd8ed1ab_0
+  - pooch=1.8.2=pyhd8ed1ab_0
+  - prompt-toolkit=3.0.48=pyha770c72_0
+  - prompt_toolkit=3.0.48=hd8ed1ab_1
+  - psutil=5.9.0=py312h827c3e9_1
+  - pure_eval=0.2.3=pyhd8ed1ab_0
+  - pybind11-abi=5=hd3eb1b0_0
+  - pycparser=2.22=pyhd8ed1ab_0
+  - pygments=2.18.0=pyhd8ed1ab_0
+  - pysocks=1.7.1=pyh0701188_6
+  - python=3.12.9=h3f84c4b_1_cpython
+  - python-dateutil=2.9.0=pyhd8ed1ab_0
+  - python_abi=3.12=6_cp312
+  - pywin32=308=py312h5da7b33_0
+  - pyzmq=26.2.0=py312h5da7b33_0
+  - qdldl-python=0.1.7.post0=py312hc7c4135_0
+  - requests=2.32.3=pyhd8ed1ab_0
+  - scipy=1.15.2=py312h9d85e7c_1
+  - scs=3.2.7.post2=default_py312hce74639_0
+  - setuptools=75.8.0=py312haa95532_0
+  - six=1.16.0=pyhd3eb1b0_1
+  - sqlite=3.45.3=h2bbff1b_0
+  - stack_data=0.6.2=pyhd8ed1ab_0
+  - tbb=2021.8.0=h59b6b97_0
+  - tk=8.6.13=h5226925_1
+  - tornado=6.4.2=py312h827c3e9_0
+  - traitlets=5.14.3=pyhd8ed1ab_0
+  - typing_extensions=4.12.2=pyha770c72_0
+  - tzdata=2025a=h04d1e81_0
+  - ucrt=10.0.22621.0=h57928b3_1
+  - urllib3=2.2.3=pyhd8ed1ab_0
+  - vc=14.42=haa95532_4
+  - vc14_runtime=14.42.34433=h6356254_24
+  - vs2015_runtime=14.42.34433=hfef2bbc_24
+  - wcwidth=0.2.13=pyhd8ed1ab_0
+  - wheel=0.45.1=py312haa95532_0
+  - win_inet_pton=1.1.0=pyh7428d3b_7
+  - zeromq=4.3.5=he1f189c_4
+  - zipp=3.21.0=pyhd8ed1ab_0
+  - zstandard=0.23.0=py312h4fc1ca9_1
+  - zstd=1.5.6=h0ea2cb4_0
+prefix: C:\Users\geltb\miniconda3\envs\qgi

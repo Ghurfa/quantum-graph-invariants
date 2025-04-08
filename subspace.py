@@ -55,14 +55,16 @@ class Subspace:
         for bvec in self.basis:
             adjoint = bvec.conj().T
             for bvec_other in self.basis:
-                if np.array_equal(adjoint, bvec_other) or np.array_equal(-adjoint, bvec_other):
+                if np.allclose(adjoint, bvec_other) or np.allclose(-adjoint, bvec_other):
                     break
             else:
                 raise ValueError("Basis missing adjoint of basis vector (cannot verify closure under adjoint)")
             
     def __str__(self):
-        ret = "BASIS:\n" + "\n----------------\n".join(str(mm.SimpleMatrix(bvec, 0)) for bvec in self.basis) + \
-              "\n\nCONSTRAINTS:\n" + "\n\n".join(str(mm.SimpleMatrix(const, 0)) for const in self.constraints)
+        integral = 'int' in str(self.basis[0].dtype)
+        precision = 0 if integral else 2
+        ret = "BASIS:\n" + "\n----------------\n".join(str(mm.SimpleMatrix(bvec, precision)) for bvec in self.basis) + \
+              "\n\nCONSTRAINTS:\n" + "\n\n".join(str(mm.SimpleMatrix(const, precision)) for const in self.constraints)
         return ret
     
     def __repr__(self):
@@ -111,7 +113,7 @@ def eg(graph: Graph) -> Subspace:
     ret = Subspace(n)
     edges, non_edges = graph.edges
     
-    ret.basis.append(np.identity(n).astype(int))
+    ret.basis.append(np.identity(n))
     for i in range(1, n):
         mat = np.zeros([n, n])
         mat[0, 0] = 1
@@ -137,9 +139,9 @@ def antilaplacian(graph: Graph) -> Subspace:
         return mn(n)
 
     L = graph.laplacian_matrix
-    mat = L * n - np.identity(n).astype(int) * np.trace(L)
-    mat_gcd = np.gcd.reduce(mat, axis=(0, 1))
-    return from_constraints([mat // mat_gcd])
+    mat = L * n - np.identity(n) * np.trace(L)
+    mat_gcd = np.gcd.reduce(mat.astype(int), axis=(0, 1))
+    return from_constraints([mat.astype(float) // mat_gcd])
 
 def from_basis(basis: List[np.ndarray]):
     """
@@ -198,12 +200,12 @@ def validate_partial_basis(basis: List[np.ndarray], incl_id: bool):
 
     assert all(bvec.shape == (n, n) for bvec in basis)
     assert all(bvec.any() for bvec in basis)
-    assert all(any(np.array_equal(other, bvec.conj().T) or np.array_equal(-other, bvec.conj().T) for other in basis) for bvec in basis)
+    assert all(any(np.allclose(other, bvec.conj().T) or np.allclose(-other, bvec.conj().T) for other in basis) for bvec in basis)
     assert all(is_h_ortho(bvec, basis[:i]) for i, bvec in enumerate(basis))
     if incl_id:
-        assert not(is_independent(np.identity(n).astype(int), basis))
+        assert not(is_independent(np.identity(n), basis))
     else:
-        assert is_h_ortho(np.identity(n).astype(int), basis)
+        assert is_h_ortho(np.identity(n), basis)
 
 def is_independent(matrix: np.ndarray, basis: List[np.ndarray]) -> bool:
     """
@@ -227,32 +229,21 @@ def is_h_ortho(matrix: np.ndarray, basis: List[np.ndarray]) -> bool:
     Checks if the adjoint of matrix is orthogonal to the given basis and that matrix != 0
     """
 
-    return matrix.any() and all((np.trace(bvec @ matrix) == 0) for bvec in basis)
+    return not(np.allclose(matrix, np.zeros(matrix.shape))) and all(np.isclose(np.trace(bvec @ matrix), 0) for bvec in basis)
 
 def orthogonalize(matrix: np.ndarray, basis: List[np.ndarray]) -> np.ndarray:
     """
-    Modifies (the adjoint of) the matrix to be orthogonal to the given basis while ensuring integer entries
+    Modifies the matrix to be orthogonal to the given basis via Gram-Schmidt
     """
 
     for bvec in basis:
-        num = np.trace(bvec @ matrix)
-        if num == 0:
-            continue
-
+        num = np.trace(bvec @ matrix.T)
         denom = np.trace(bvec @ bvec.conj().T)
-        gcd = np.gcd(num, denom)
-        num //= gcd
-        denom //= gcd
+        matrix -= bvec * (num / denom)
 
-        matrix = matrix * denom - num * bvec
+    return matrix
 
-        mat_gcd = np.gcd.reduce(matrix, axis=(0, 1))
-        matrix //= mat_gcd
-
-    mat_gcd = np.gcd.reduce(matrix, axis=(0, 1))
-    return matrix // mat_gcd
-
-def complete_basis(basis: List[np.ndarray], mat_src: Iterator[np.ndarray] = None):
+def complete_basis(basis: List[np.ndarray], mat_src: Iterator[np.ndarray] = None, mat_standardizer: Callable[[np.ndarray], np.ndarray] = None):
     """
     Starting with the given nonempty basis, extends it in-place by taking matrices from mat_src
     and orthogonalizing them. If mat_src is unspecified, then we use the standard basis for M_n
@@ -270,56 +261,63 @@ def complete_basis(basis: List[np.ndarray], mat_src: Iterator[np.ndarray] = None
             continue
 
         matrix = orthogonalize(matrix, basis)
+        if mat_standardizer:
+            matrix = mat_standardizer(matrix)
         
         adjoint = matrix.conj().T
-        if np.array_equal(matrix, adjoint) or np.array_equal(matrix, -adjoint):
+        if np.allclose(matrix, adjoint) or np.allclose(matrix, -adjoint):
             basis.append(matrix)
         elif is_h_ortho(adjoint, basis + [matrix]):
             basis.append(matrix)
             basis.append(adjoint)
         else:
             matrix = matrix + adjoint
-            mat_gcd = np.gcd.reduce(matrix, axis=(0, 1))
-            matrix //= mat_gcd
+            if mat_standardizer:
+                matrix = mat_standardizer(matrix)
             if is_h_ortho(matrix, basis):
                 basis.append(matrix)
 
-def random_basis(n: int, low=-10, high=10, density=0.3) -> List[np.ndarray]:
+def random_basis(n: int, density=0.3) -> List[np.ndarray]:
     """
     Generates a randomized basis for M_n
     """
 
-    basis = [np.identity(n).astype(int)]
+    basis = [np.identity(n)]
     num_nonzero = max(1, int(density * n * n))
     
     def rand_mat_src() -> Iterator[np.ndarray]:
         while True:
-            matrix = np.zeros((n, n), dtype=int)
+            matrix = np.zeros((n, n))
             indices = np.random.choice(n * n, num_nonzero, replace=False)
             for index in indices:
                 i, j = divmod(index, n)
-                matrix[i, j] = np.random.randint(low, high + 1)
+                matrix[i, j] = np.random.random() * 4 - 2
             
             yield matrix
     
-    complete_basis(basis, rand_mat_src())
+    def normalize(mat: np.ndarray) -> np.ndarray:
+        goal_norm = n * n
+        curr_norm = np.trace(mat @ mat.T)
+        return mat * np.sqrt(goal_norm / curr_norm)
+
+    complete_basis(basis, rand_mat_src(), normalize)
     return basis
 
-def random_s1_s2(n: int, low=-10, high=10, density=0.3) -> Tuple[Subspace, Subspace, Subspace]:
+def random_s1_s2(n: int, density=0.3) -> Tuple[Subspace, Subspace, Subspace]:
     """
-    Generates random subspaces S1 and S2 such that I_n \in S_2 \subseteq S1 \subseteq M_n.
+    Generates random subspaces S1 and S2 such that I_n in S_2 subseteq S1 subseteq M_n.
 
     Returns S1, S2, and S1^perp + S2
     """
 
     # Start with a randomized basis for M_n. Assume basis[0] = I_n
-    starting_basis = random_basis(n, low, high, density)
+    starting_basis = random_basis(n, density)
 
     # For each basis vector pair (A, A*), remove A* (will be added back later)
     bvecs = [starting_basis.pop(0)]
     while len(starting_basis) > 0:
         bvec = starting_basis.pop()
-        if (len(starting_basis) > 0) and np.array_equal(bvec.conj().T, starting_basis[-1]):
+        if (len(starting_basis) > 0) and np.allclose(bvec.conj().T, starting_basis[-1]):
             starting_basis.pop()
         bvecs.append(bvec)
     
@@ -333,7 +331,7 @@ def random_s1_s2(n: int, low=-10, high=10, density=0.3) -> Tuple[Subspace, Subsp
         ret = []
         for i in range(start, stop):
             bvec = bvecs[i]
-            if np.array_equal(bvec, bvec.conj().T) or np.array_equal(bvec, -bvec.conj().T):
+            if np.allclose(bvec, bvec.conj().T) or np.allclose(bvec, -bvec.conj().T):
                 ret.append(bvec)
             else:
                 ret.append(bvec)

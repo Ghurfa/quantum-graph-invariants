@@ -54,8 +54,8 @@ class Graph:
 
         n = self._n
         edges, nonedges = self.edges
-        E = np.zeros((n, n), dtype=int)
-        E_complement = np.zeros((n, n), dtype=int)
+        E = np.zeros((n, n))
+        E_complement = np.zeros((n, n))
         for x in edges:
             E[x[0], x[1]] = 1
         for x in nonedges:
@@ -70,7 +70,7 @@ class Graph:
         """
         n = self._n
         edges, _ = self.edges
-        L = np.zeros((n, n), dtype=int)
+        L = np.zeros((n, n))
 
         for (i, j) in edges:
             L[i, j] = -1

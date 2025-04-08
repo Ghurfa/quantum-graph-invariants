@@ -10,7 +10,7 @@ def e_matrix(n: int, i: int, j: int) -> np.ndarray:
     Creates a matrix that is all zeroes except for a one at (i, j)
     """
 
-    E = np.zeros((n,n), dtype=int)
+    E = np.zeros((n,n))
     E[i, j] = 1
     return E
 
@@ -19,7 +19,7 @@ def delta_matrix(n: int) -> np.ndarray:
     Creates a matrix that is the sum of (e (x) e) where e is each of the e-matrices of size n
     """
 
-    ret = np.zeros((n * n, n * n), dtype=int)
+    ret = np.zeros((n * n, n * n))
     for i in range(n):
         for j in range(n):
             ret[i * n + i, j * n + j] = 1

@@ -106,7 +106,7 @@ def quantil_vs_n():
             possible_edges = (n * n - n) // 2
             density = num_edges / possible_edges
 
-            print(n, i, qlt, density, 1/density)
+            print(n, i, qlt, density, 1 / density)
             
 def quantil_vs_density():
     """
@@ -132,7 +132,7 @@ def quantil_vs_density():
 
             print(goal_density, qlt, density, 1 / density, sep='\t')
             total += qlt
-        vals.append(total)        
+        vals.append(total)
     print(vals)
 
 def quantaj():
@@ -148,7 +148,3 @@ def quantaj():
             qlt, Y = lt_quantum(qg)
           
             print(n, i, indcp, qlt)
-
-# np.random.seed(10700)
-# # indcp_qlt_equality()
-# indcp_infeasibility()
