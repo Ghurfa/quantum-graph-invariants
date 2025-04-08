@@ -89,7 +89,7 @@ def sg(graph: Graph) -> Subspace:
 
     n = graph.n
     ret = Subspace(n)
-    edges, non_edges = graph.edges()
+    edges, non_edges = graph.edges
     
     for i in range(n):
         ret.basis.append(mm.e_matrix(n, i, i))
@@ -109,9 +109,9 @@ def eg(graph: Graph) -> Subspace:
 
     n = graph.n
     ret = Subspace(n)
-    edges, non_edges = graph.edges()
+    edges, non_edges = graph.edges
     
-    ret.basis.append(np.identity(n))
+    ret.basis.append(np.identity(n).astype(int))
     for i in range(1, n):
         mat = np.zeros([n, n])
         mat[0, 0] = 1

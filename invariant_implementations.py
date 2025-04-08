@@ -6,9 +6,7 @@ import matrix_manip as mm
 from matrix_manip import SimpleSymmMatrix, SimpleChoiMatrix
 from subspace import Subspace
 
-lam_precision = 4
-
-def lt_general(subspace: Subspace) -> Tuple[float, SimpleSymmMatrix]:
+def lt_general(subspace: Subspace) -> Tuple[float, np.ndarray]:
     """
     Calculates min{ max_i{A_ii : A in S, A - J_n is PSD }}
 
@@ -36,9 +34,9 @@ def lt_general(subspace: Subspace) -> Tuple[float, SimpleSymmMatrix]:
 
     prob = cvxpy.Problem(cvxpy.Minimize(t), constraints)
     prob.solve()
-    return round(1 + float(t.value), lam_precision), SimpleSymmMatrix(np.array(Y.value))
+    return 1 + float(t.value), Y.value
 
-def araiza_4_1(s1: Subspace, s2: Subspace, pt_axis: int) -> Tuple[float, SimpleChoiMatrix]: 
+def araiza_4_1(s1: Subspace, s2: Subspace, pt_axis: int) -> Tuple[float, np.ndarray]: 
     """
     Computes either the SDP in Prop 4.1 (gives Ind_CP(S1 : S2)) or the SDP in Prop 4.8
     (gives quantum Lovasz Theta). They differ only by the axis of the partial trace in constraint 1.
@@ -71,9 +69,10 @@ def araiza_4_1(s1: Subspace, s2: Subspace, pt_axis: int) -> Tuple[float, SimpleC
     
     prob = cvxpy.Problem(cvxpy.Maximize(lam), constraints)
     prob.solve()
-    return round(1 / float(lam.value), lam_precision), SimpleChoiMatrix(np.array(X.value))
+    a = prob.status
+    return 1 / float(lam.value), X.value
 
-def ind_cp_v2(s1: Subspace, s2: Subspace) -> Tuple[float, SimpleChoiMatrix]:    
+def ind_cp_v2(s1: Subspace, s2: Subspace) -> Tuple[float, np.ndarray]:    
     n = s1.n
 
     X = cvxpy.Variable((n * n, n * n), symmetric=True)
@@ -92,4 +91,4 @@ def ind_cp_v2(s1: Subspace, s2: Subspace) -> Tuple[float, SimpleChoiMatrix]:
     
     prob = cvxpy.Problem(cvxpy.Minimize(lam), constraints)
     prob.solve()
-    return 1 + round(float(lam.value), lam_precision), SimpleChoiMatrix(np.array(X.value))
+    return 1 + float(lam.value), X.value

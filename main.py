@@ -11,3 +11,8 @@ from invariants import *
 from subspace import Subspace
 
 experiments.antilaplacian_indcp_eq_2()
+print(
+    lt(gg.petersen()),
+    quantil(gg.petersen()),
+    sep='\n'
+)

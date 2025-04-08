@@ -138,6 +138,24 @@ def independent(n: int) -> Graph:
     adj_list = { i: [] for i in range(n)}
     return Graph(adj_list)
 
+def petersen() -> Graph:
+    """
+    Creates the petersen graph
+    """
+
+    return Graph({
+        0: [4, 1, 5],
+        1: [0, 2, 6],
+        2: [1, 3, 7],
+        3: [2, 4, 8],
+        4: [3, 0, 9],
+        5: [0, 7, 8],
+        6: [1, 8, 9],
+        7: [2, 9, 5],
+        8: [3, 5, 6],
+        9: [4, 6, 7]
+    })
+
 def from_edge_list(n: int, *edge_list: List[Tuple[int, int]]) -> Graph:
     """
     Creates a graph with the given number of nodes and edge list

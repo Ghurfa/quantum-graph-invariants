@@ -1,10 +1,12 @@
 from typing import *
 
-import invariant_implementations
+import invariant_implementations as ii
 import subspace as ss
 from matrix_manip import SimpleSymmMatrix, SimpleChoiMatrix
 from graph_generate import Graph
 from subspace import Subspace
+
+lam_precision = 9
 
 def lt_general(subspace: Subspace) -> Tuple[float, SimpleSymmMatrix]:
     """
@@ -12,7 +14,8 @@ def lt_general(subspace: Subspace) -> Tuple[float, SimpleSymmMatrix]:
     """
 
     subspace.ensure_valid()
-    return invariant_implementations.lt_general(subspace)
+    val, witness = ii.lt_general(subspace)
+    return round(val, lam_precision), SimpleSymmMatrix(witness)
 
 def ind_cp(s1: Subspace, s2: Subspace) -> Tuple[float, SimpleChoiMatrix]:
     """
@@ -24,7 +27,8 @@ def ind_cp(s1: Subspace, s2: Subspace) -> Tuple[float, SimpleChoiMatrix]:
     if not(s2.is_subspace_of(s1)):
         raise ValueError("S2 is not a sub-operator system of S1")
     
-    return invariant_implementations.araiza_4_1(s1, s2, 0)
+    val, witness = ii.araiza_4_1(s1, s2, 0)
+    return round(val, lam_precision), SimpleChoiMatrix(witness)
 
 def lt_quantum(subspace: Subspace) -> Tuple[float, SimpleChoiMatrix]:
     """
@@ -32,13 +36,14 @@ def lt_quantum(subspace: Subspace) -> Tuple[float, SimpleChoiMatrix]:
     """
 
     subspace.ensure_valid()
-    return invariant_implementations.araiza_4_1(ss.mn(subspace.n), subspace, 1)
+    val, witness = ii.araiza_4_1(ss.mn(subspace.n), subspace, 1)
+    return round(val, lam_precision), SimpleChoiMatrix(witness)
 
 def lt(graph: Graph) -> Tuple[float, SimpleSymmMatrix]:
     return lt_general(ss.eg(graph))
 
-def lt_indcp(graph: Graph) -> Tuple[float, SimpleSymmMatrix]:
-    return ind_cp(ss.mn(graph.n), ss.sg(graph))
-
 def lt_relative(gamma: Graph, lam: Graph) -> Tuple[float, SimpleSymmMatrix]:
-    return ind_cp(ss.sg(gamma), ss.sg(lam))
+    return lt_general(ss.sg((gamma - lam).compl))
+
+def quantil(gamma: Graph) -> Tuple[float, SimpleChoiMatrix]:
+    return lt_quantum(ss.antilaplacian(gamma))
