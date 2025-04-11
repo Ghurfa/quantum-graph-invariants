@@ -6,7 +6,7 @@ from matrix_manip import SimpleSymmMatrix, SimpleChoiMatrix
 from graph_generate import Graph
 from subspace import Subspace
 
-lam_precision = 20
+lam_precision = 15
 
 def lt_general(subspace: Subspace) -> Tuple[float, SimpleSymmMatrix]:
     """

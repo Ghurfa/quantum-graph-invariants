@@ -4,6 +4,7 @@ import subspace as ss
 import matplotlib.pyplot as plt
 import networkx as nx
 import invariants as invar
+import graph_generate as gg
 
 
 def visualize_graph(adjMat: np.ndarray):
@@ -40,4 +41,58 @@ def check_conjugation():
             conjugatedSubspace = ss.from_basis(newbasis)
 
             print(abs(invar.ind_cp(universe, quantum_graph)[0]-invar.ind_cp(universe, conjugatedSubspace)[0]), "\n")
-            
+
+
+def get_conjugate_basis(myUni, basis):
+    '''
+    Given compatible unitary matrix and a basis of matrices, say {b_i}, define a basis to be {Ub_iU*} 
+    '''
+    myUniH = myUni.getH()
+    newbasis = []
+    for element in graphsystem1.basis:
+        prod1 = np.dot(myUni, element)
+        prod2 = np.dot(prod1, myUniH)
+        newbasis.append(np.array(prod2))
+    return newbasis
+
+
+def sg1_rotate_sg2(unitary, sg1, sg2):
+    '''
+    Given two graph systems and a compatible unitary matrix, define the quantum graph given by Usg1U* + Sg2
+    #Jordan L checked this function implementation to his original test implementation.
+    '''
+    sg1_basis = sg1.basis
+    sg2_basis = sg2.basis
+    conjugate_sg1_basis = get_conjugate_basis(unitary, sg1.basis)
+    mergedSet = conjugate_sg1_basis + sg2.basis
+    myQuantumBasis = []
+    myQuantumBasis.append(mergedSet[0])
+    ss.complete_basis(myQuantumBasis, iter(mergedSet))
+    myQuantumGraph = ss.from_basis(myQuantumBasis)
+    return myQuantumGraph
+    
+
+n = 10
+myUni = np.matrix(mm.rand_uni(n))
+myUniH = myUni.getH()
+
+for i in range(10):
+    graph1 = gg.random(n, 0.2)
+    graph2 = gg.random(n, 0.2)
+
+
+    #visualize_graph(graph1.adjacency_matrix[0])
+    #visualize_graph(graph2.adjacency_matrix[0])
+
+    graphsystem1 = ss.sg(graph1)
+    graphsystem2 = ss.sg(graph2)
+
+    print(ss.is_independent(np.identity(n), graphsystem2.basis))
+
+    myQgraph = sg1_rotate_sg2(myUni, graphsystem1, graphsystem2)
+
+
+
+    print("\nquantum theta of composite", invar.lt_quantum(myQgraph)[0])
+    print("\nLovasz theta of graph 1", invar.lt_general(graphsystem1)[0])
+    print("\nLovasz theta of graph 2", invar.lt_general(graphsystem2)[0])
