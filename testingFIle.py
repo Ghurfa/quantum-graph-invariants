@@ -1,14 +1,17 @@
 import numpy as np
 import matrix_manip as mm
 import subspace as ss
-import matplotlib.pyplot as plt
-import networkx as nx
 import invariants as invar
 import graph_generate as gg
 
-
 def visualize_graph(adjMat: np.ndarray):
-    #Visualize graph function.
+    """
+    Visualize graph function.
+    """
+
+    import matplotlib.pyplot as plt
+    import networkx as nx
+
     def gen_graph(adjacencyMat):
         rows, cols = np.where(adjacencyMat==1)
         edges = zip(rows.tolist(), cols.tolist())
@@ -23,7 +26,11 @@ def visualize_graph(adjMat: np.ndarray):
     show_graph(gen_graph(adjMat))
 
 def check_conjugation():
-    for n in range(3,8):
+    """
+    Verifies that our ind_cp implementation is invariant under the input being conjugated by a unitary matrix
+    """
+
+    for n in range(3, 8):
         universe = ss.mn(n)
         print("Size is now", n, "\n")
         for i in range(5):
@@ -44,9 +51,9 @@ def check_conjugation():
 
 
 def get_conjugate_basis(myUni, basis):
-    '''
+    """
     Given compatible unitary matrix and a basis of matrices, say {b_i}, define a basis to be {Ub_iU*} 
-    '''
+    """
     myUniH = myUni.getH()
     newbasis = []
     for element in graphsystem1.basis:
@@ -57,22 +64,17 @@ def get_conjugate_basis(myUni, basis):
 
 
 def sg1_rotate_sg2(unitary, sg1, sg2):
-    '''
+    """
     Given two graph systems and a compatible unitary matrix, define the quantum graph given by Usg1U* + Sg2
     #Jordan L checked this function implementation to his original test implementation.
-    '''
-    sg1_basis = sg1.basis
-    sg2_basis = sg2.basis
-    conjugate_sg1_basis = get_conjugate_basis(unitary, sg1.basis)
-    mergedSet = conjugate_sg1_basis + sg2.basis
-    myQuantumBasis = []
-    myQuantumBasis.append(mergedSet[0])
-    ss.complete_basis(myQuantumBasis, iter(mergedSet))
+    """
+    myQuantumBasis = get_conjugate_basis(unitary, sg1.basis)
+    ss.extend_basis(myQuantumBasis, iter(sg2.basis))
     myQuantumGraph = ss.from_basis(myQuantumBasis)
     return myQuantumGraph
     
 
-n = 10
+n = 5
 myUni = np.matrix(mm.rand_uni(n))
 myUniH = myUni.getH()
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 from typing import *
 import numpy as np
-import random as randy
 
 class Graph:
     def __init__(self, adj_list: Dict[int, List[int]]):
@@ -47,20 +46,17 @@ class Graph:
         return edge, edge_complement
 
     @property
-    def adjacency_matrix(self) -> Tuple[np.ndarray, np.ndarray]:
+    def adjacency_matrix(self) -> np.ndarray:
         """
         Creates the adjacency matrix of the graph
         """
 
         n = self._n
-        edges, nonedges = self.edges
+        edges, _ = self.edges
         E = np.zeros((n, n))
-        E_complement = np.zeros((n, n))
         for x in edges:
             E[x[0], x[1]] = 1
-        for x in nonedges:
-            E_complement[x[0], x[1]] = 1
-        return E, E_complement
+        return E
 
     @property
     def laplacian_matrix(self) -> np.ndarray:
@@ -176,7 +172,7 @@ def random(n: int, density: float) -> Graph:
     edge_list = []
     for i in range(n):
         for j in range(i + 1, n):
-            if randy.random() < density:
+            if np.random.random() < density:
                 edge_list.append((i, j))
     
     return from_edge_list(n, *edge_list)

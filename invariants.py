@@ -1,4 +1,5 @@
 from typing import *
+import numpy as np
 
 import invariant_implementations as ii
 import subspace as ss
@@ -28,6 +29,11 @@ def ind_cp(s1: Subspace, s2: Subspace) -> Tuple[float, SimpleChoiMatrix]:
         raise ValueError("S2 is not a sub-operator system of S1")
     
     val, witness = ii.araiza_4_1(s1, s2, 0)
+    return round(val, lam_precision), SimpleChoiMatrix(witness)
+
+def lam_tilde(subspace: Subspace) -> Tuple[float, SimpleChoiMatrix]:
+    subspace.ensure_valid()
+    val, witness = ii.araiza_4_1(subspace, ss.from_basis(np.identity(subspace.n)), 0)
     return round(val, lam_precision), SimpleChoiMatrix(witness)
 
 def lt_quantum(subspace: Subspace) -> Tuple[float, SimpleChoiMatrix]:

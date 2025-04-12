@@ -1,5 +1,6 @@
 #Parts of this script use code written in 2013 by Daniel Stahlke (https://gist.github.com/dstahlke/6895643)
 #The purpose of this file is to compare our values of ind_cp(M_n : S_G) and QLT(S_G) vs a verified formulation of the lovasz theta
+
 from __future__ import print_function
 
 import numpy as np
@@ -21,7 +22,7 @@ def parse_graph(G, complement=False):
     
     if isinstance(G, CustomGraph):
         
-        adj_matrix, _ = G.adjacency_matrix
+        adj_matrix = G.adjacency_matrix
         G = adj_matrix 
     else:
         
