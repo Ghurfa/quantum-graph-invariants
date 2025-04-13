@@ -176,3 +176,25 @@ def random(n: int, density: float) -> Graph:
                 edge_list.append((i, j))
     
     return from_edge_list(n, *edge_list)
+
+def random_g1_g2(n: int, density1: float, density2: float) -> Tuple[Graph, Graph]:
+    """
+    Generate two random graphs with G1 >= G2. The goal density of G1 is given by density 1
+    and the goal density of G2 is given by density 2
+    """
+
+    assert density1 >= density2, "Density 1 should be higher than density 2"
+    
+    edge_list1 = []
+    edge_list2 = []
+    for i in range(n):
+        for j in range(i + 1, n):
+            rng = np.random.random()
+            if rng < density1:
+                edge_list1.append((i, j))
+            if rng < density2:
+                edge_list2.append((i, j))
+    
+    g1 = from_edge_list(n, *edge_list1)
+    g2 = from_edge_list(n, *edge_list2)
+    return g1, g2
