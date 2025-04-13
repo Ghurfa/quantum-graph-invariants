@@ -42,6 +42,13 @@ def rand_uni(n) -> np.ndarray:
         
     return Q
 
+def normalize(mat: np.ndarray, goal_norm = None) -> np.ndarray:
+    if goal_norm is None:
+        n = mat.shape[0]
+        goal_norm = n * n
+    curr_norm = np.trace(mat @ mat.T)
+    return mat * np.sqrt(goal_norm / curr_norm)
+
 def _delegate_op(numpy_op):
     """Decorator to apply a numpy operation to self.data and return an instance of self.__class__."""
     def wrapper(self, other):

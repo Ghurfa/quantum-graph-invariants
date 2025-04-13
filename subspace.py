@@ -188,7 +188,7 @@ def validate_partial_basis(basis: List[np.ndarray], incl_id: bool):
     (if incl_id = True) or in their orthogonal space (if incl_id = False)
     """
 
-    assert basis
+    assert isinstance(basis, List)
     
     if len(basis) == 0:
         assert not(incl_id)
@@ -229,7 +229,7 @@ def is_ortho(matrix: np.ndarray, basis: List[np.ndarray]) -> bool:
     Checks if the matrix is orthogonal to the given basis and that matrix != 0
     """
 
-    return not(np.allclose(matrix, np.zeros(matrix.shape))) and all(np.isclose(np.trace(bvec @ matrix.conj().T), 0) for bvec in basis)
+    return not(np.allclose(matrix, np.zeros_like(matrix))) and all(np.isclose(np.trace(bvec @ matrix.conj().T), 0) for bvec in basis)
 
 def orthogonalize(matrix: np.ndarray, basis: List[np.ndarray]) -> np.ndarray:
     """
@@ -244,7 +244,7 @@ def orthogonalize(matrix: np.ndarray, basis: List[np.ndarray]) -> np.ndarray:
 
     return matrix
 
-def extend_basis(basis: List[np.ndarray], mat_src: Iterator[np.ndarray] = None, mat_standardizer: Callable[[np.ndarray], np.ndarray] = None):
+def extend_basis(basis: List[np.ndarray], mat_src: Iterator[np.ndarray] = None, mat_standardizer: Callable[[np.ndarray], np.ndarray] = mm.normalize):
     """
     Starting with the given nonempty matrix basis, extends it in-place by taking matrices from mat_src
     and orthogonalizing them. Ends when mat_src runs out or when the basis is a complete basis for M_n.
@@ -261,10 +261,9 @@ def extend_basis(basis: List[np.ndarray], mat_src: Iterator[np.ndarray] = None, 
         if matrix is None:                      # mat_src is exhausted
             return
 
-        if not(is_independent(matrix, basis)):  # Regenerate if matrix is in span of basis already
-            continue
-
         matrix = orthogonalize(matrix, basis)
+        if np.allclose(matrix, np.zeros_like(matrix)):  # Regenerate if matrix is in span of basis already
+            continue
         if mat_standardizer:
             matrix = mat_standardizer(matrix)
         
@@ -298,13 +297,8 @@ def random_basis(n: int, density=0.3) -> List[np.ndarray]:
                 matrix[i, j] = np.random.random() * 4 - 2
             
             yield matrix
-    
-    def normalize(mat: np.ndarray) -> np.ndarray:
-        goal_norm = n * n
-        curr_norm = np.trace(mat @ mat.T)
-        return mat * np.sqrt(goal_norm / curr_norm)
 
-    extend_basis(basis, rand_mat_src(), normalize)
+    extend_basis(basis, rand_mat_src(), mm.normalize)
     return basis
 
 def random_s1_s2(n: int, density=0.3) -> Tuple[Subspace, Subspace, Subspace]:
