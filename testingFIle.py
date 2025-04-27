@@ -56,7 +56,7 @@ def get_conjugate_basis(myUni, basis):
     """
     myUniH = myUni.getH()
     newbasis = []
-    for element in graphsystem1.basis:
+    for element in basis:
         prod1 = np.dot(myUni, element)
         prod2 = np.dot(prod1, myUniH)
         newbasis.append(np.array(prod2))

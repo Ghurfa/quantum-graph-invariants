@@ -30,6 +30,7 @@ def rand_uni(n) -> np.ndarray:
     Generates an n x n random matrix with Gaussian-distributed entries (clipped to [0,1])
     and then orthonormalizes its columns using the Gram-Schmidt process to form a unitary matrix.
     """
+
     X = np.random.normal(loc=0, scale=1, size=(n, n))
     
     Q = np.zeros_like(X)
@@ -43,11 +44,25 @@ def rand_uni(n) -> np.ndarray:
     return Q
 
 def normalize(mat: np.ndarray, goal_norm = None) -> np.ndarray:
+    """
+    Normalize a matrix so that its Frobenius norm equals the goal norm. Default goal is n^2.
+    """
+
     if goal_norm is None:
         n = mat.shape[0]
         goal_norm = n * n
     curr_norm = np.trace(mat @ mat.T)
     return mat * np.sqrt(goal_norm / curr_norm)
+
+def is_psd(mat: np.ndarray) -> bool:
+    """
+    Determines whether a square matrix is positive semidefinite.
+    """
+
+    eigs = np.real_if_close(np.linalg.eigvals(mat))
+    good = all(eig > 0 or np.isclose(eig, 0) for eig in eigs)
+    return good
+
 
 def _delegate_op(numpy_op):
     """Decorator to apply a numpy operation to self.data and return an instance of self.__class__."""
@@ -88,6 +103,7 @@ class SimpleMatrix:
         """
         Enable combining SimpleMatrix with numpy arrays in expressions like adding
         """
+        
         inputs = tuple(i.data if isinstance(i, SimpleMatrix) else i for i in inputs)
         result = getattr(ufunc, method)(*inputs, **kwargs)
         return self.__class__(result) if isinstance(result, np.ndarray) else result
@@ -113,6 +129,9 @@ class SimpleMatrix:
     @property
     def eigs(self):
         return SimpleMatrix(np.linalg.eigvals(self.data))
+    
+    def with_precision(self, precision: int):
+        return self.__class__(self.data, precision)
     
 class SimpleSymmMatrix(SimpleMatrix):
     def __init__(self, mat: np.ndarray, precision: int = 2):

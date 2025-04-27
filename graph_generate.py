@@ -16,7 +16,7 @@ class Graph:
     @property
     def compl(self) -> Graph:
         n = self.n
-        return Graph({i: list(set(range(n)) - set(self.adj_list[i])) for i in range(n)})
+        return Graph({i: list(set(range(n)) - set(self.adj_list[i]) - set([i])) for i in range(n)})
     
     def __sub__(self, other: Graph) -> Graph:
         if not(other.is_subgraph_of(self)):

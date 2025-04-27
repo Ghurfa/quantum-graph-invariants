@@ -33,7 +33,7 @@ def ind_cp(s1: Subspace, s2: Subspace) -> Tuple[float, SimpleChoiMatrix]:
 
 def lam_tilde(subspace: Subspace) -> Tuple[float, SimpleChoiMatrix]:
     subspace.ensure_valid()
-    val, witness = ii.araiza_4_1(subspace, ss.from_basis(np.identity(subspace.n)), 0)
+    val, witness = ii.araiza_4_1(subspace, ss.ci(subspace.n), 0)
     return round(val, lam_precision), SimpleChoiMatrix(witness)
 
 def lt_quantum(subspace: Subspace) -> Tuple[float, SimpleChoiMatrix]:

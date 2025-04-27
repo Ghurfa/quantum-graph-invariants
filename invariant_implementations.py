@@ -36,7 +36,7 @@ def lt_general(subspace: Subspace) -> Tuple[float, np.ndarray]:
     prob.solve()
     return 1 + float(t.value), Y.value
 
-def araiza_4_1(s1: Subspace, s2: Subspace, pt_axis: int) -> Tuple[float, np.ndarray]: 
+def araiza_4_1(s1: Subspace, s2: Subspace, pt_axis: int) -> Tuple[float, np.ndarray]:
     """
     Computes either the SDP in Prop 4.1 (gives Ind_CP(S1 : S2)) or the SDP in Prop 4.8
     (gives quantum Lovasz Theta). They differ only by the axis of the partial trace in constraint 1.
@@ -69,26 +69,5 @@ def araiza_4_1(s1: Subspace, s2: Subspace, pt_axis: int) -> Tuple[float, np.ndar
     
     prob = cvxpy.Problem(cvxpy.Maximize(lam), constraints)
     prob.solve()
-    a = prob.status
     return 1 / float(lam.value), X.value
 
-def ind_cp_v2(s1: Subspace, s2: Subspace) -> Tuple[float, np.ndarray]:    
-    n = s1.n
-
-    X = cvxpy.Variable((n * n, n * n), symmetric=True)
-    lam = cvxpy.Variable(1)
-
-    constraints = [
-        cvxpy.partial_trace(X, (n, n), 0) == lam * np.identity(n),  # Constraint 1
-        X >> 0                                                      # Constraint 3
-    ]
-    
-    # Constraint 2
-    for s1_bvec in s1.basis:
-        for s2_perp_bvec in s2.constraints:
-            constraint = np.kron(s1_bvec, s2_perp_bvec).conj().T
-            constraints.append(cvxpy.trace((X + mm.delta_matrix(n)) @ constraint) == 0)
-    
-    prob = cvxpy.Problem(cvxpy.Minimize(lam), constraints)
-    prob.solve()
-    return 1 + float(lam.value), X.value

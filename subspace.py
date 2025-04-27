@@ -23,7 +23,7 @@ class Subspace:
         return ret
     
     def contains(self, mat: np.ndarray) -> bool:
-        return not(is_independent(mat, self.basis))
+        return all(np.isclose(np.trace(constraint @ mat.T), 0) for constraint in self.constraints)
 
     def is_subspace_of(self, other: Subspace) -> bool:
         if self._n != other._n:
@@ -84,6 +84,12 @@ def mn(n: int) -> Subspace:
 
     return ret
 
+def ci(n: int) -> Subspace:
+    """
+    Generate the subspace CI (complex multiples of the identity)
+    """
+    return from_basis([np.identity(n)])
+
 def sg(graph: Graph) -> Subspace:
     """
     Generate the subspace S_gamma, where not(i ~ j or i = j) implies X_ij = 0
@@ -142,6 +148,39 @@ def antilaplacian(graph: Graph) -> Subspace:
     mat = L * n - np.identity(n) * np.trace(L)
     mat_gcd = np.gcd.reduce(mat.astype(int), axis=(0, 1))
     return from_constraints([mat.astype(float) // mat_gcd])
+
+def diag_restricted(sub: Subspace) -> Subspace:
+    """
+    Given a subspace, creates the same subspace with the additional restriction that the
+    diagonal entries are equal
+    """
+
+    constraints = sub.constraints.copy()
+    n = sub.n
+    
+    def ortho(i):
+        ret = np.zeros((n, n))
+        ret[0, 0] = 1
+        ret[i, i] = -1
+        return ret
+    
+    extend_basis(constraints, iter(ortho(i) for i in range(1, n)))
+    return from_constraints(constraints)
+
+def tk(K: np.ndarray) -> Subspace:
+    """
+    Given a traceless Hermitian nonzero matrix K, creates the subspace orthogonal to it
+    """
+
+    assert not(np.array_equal(K, np.zeros_like(K)))
+    return from_constraints([K])
+
+def tks(K: np.ndarray) -> Subspace:
+    """
+    Given a traceless Hermitian nonzero matrix K, creates the equal-diagonal subspace orthogonal to it
+    """
+
+    return diag_restricted(tk(K))
 
 def from_basis(basis: List[np.ndarray]):
     """
@@ -300,6 +339,44 @@ def random_basis(n: int, density=0.3) -> List[np.ndarray]:
 
     extend_basis(basis, rand_mat_src(), mm.normalize)
     return basis
+
+def random(n: int) -> Subspace:
+    """
+    Generates a random subspace
+    """
+
+    # Start with a randomized basis for M_n. Assume basis[0] = I_n
+    starting_basis = random_basis(n, 0.3)
+
+    # For each basis vector pair (A, A*), remove A* (will be added back later)
+    bvecs = [starting_basis.pop(0)]
+    while len(starting_basis) > 0:
+        bvec = starting_basis.pop()
+        if (len(starting_basis) > 0) and np.allclose(bvec.conj().T, starting_basis[-1]):
+            starting_basis.pop()
+        bvecs.append(bvec)
+    
+    np.random.shuffle(bvecs[1:])
+
+    # Partition basis vectors. S2 will be formed from matrices 0 (inclusive) to a (exclusive)
+    a = np.random.randint(1, len(bvecs))
+
+    def extract_basis(start, stop) -> List[np.ndarray]:
+        ret = []
+        for i in range(start, stop):
+            bvec = bvecs[i]
+            if np.allclose(bvec, bvec.conj().T) or np.allclose(bvec, -bvec.conj().T):
+                ret.append(bvec)
+            else:
+                ret.append(bvec)
+                ret.append(bvec.conj().T)
+        return ret
+
+    sub = Subspace(n)
+    sub.basis = extract_basis(0, a)
+    sub.constraints = extract_basis(a, len(bvecs))
+
+    return sub
 
 def random_s1_s2(n: int, density=0.3) -> Tuple[Subspace, Subspace, Subspace]:
     """
