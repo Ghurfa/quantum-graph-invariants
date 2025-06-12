@@ -1,3 +1,6 @@
+import csv
+import os
+import matplotlib.pyplot as plt
 import numpy as np
 import random
 
@@ -283,5 +286,66 @@ def remainder_component(choi_mat: SimpleChoiMatrix, K: np.ndarray) -> Tuple[Simp
             
     return (SimpleChoiMatrix(ret), removed)
 
-np.random.seed(10700)
-s_star()
+def indcp_leq_qlt_counterexample():
+    lam = 2
+    qg = ss.from_basis([
+        np.identity(3),
+        np.array([
+            [-lam / 3, 0, 1],
+            [0, 2/3 * lam, 0],
+            [1, 0, -lam / 3]
+        ])
+    ])
+
+    indcp, X = ind_cp(ss.mn(3), qg)
+    qlt, Y = lt_quantum(qg)
+
+    print(indcp - qlt)
+
+def dim_vs_indcp_minus_qlt():
+    n = 4
+    data = []
+    for i in range(2):
+        qg = ss.random(n)
+        
+        indcp, X = ind_cp(ss.mn(n), qg)
+        qlt, Y = lt_quantum(qg)
+        diff = indcp - qlt
+        dim = len(qg.basis)
+        data.append((diff, dim))
+
+    out_file = f'out/dim_vs_indcp_minus_qlt.csv'
+    os.makedirs(os.path.dirname(out_file), exist_ok=True)
+    with open(out_file, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['IndCP - QLT', 'Dimension'])
+        writer.writerows(data)
+
+    print(f"Data saved as '{out_file}'")
+
+def plot_dim_vs_indcp_from_csv(csv_file='out/dim_vs_indcp_minus_qlt.csv', output_file='out/dim_vs_indcp_minus_qlt.png'):
+    dims = []
+    qlts = []
+
+    # Read data from the CSV file
+    with open(csv_file, mode='r') as file:
+        reader = csv.reader(file)
+        next(reader)  # Skip the header row
+        for row in reader:
+            qlts.append(float(row[0]))
+            dims.append(float(row[1]))
+
+    # Create the scatter plot
+    plt.figure(figsize=(10, 6))
+    plt.scatter(dims, qlts, color='b', alpha=0.5, label='IndCP - QLT')
+
+    # Add labels, title, and legend
+    plt.xlabel('Dim')
+    plt.ylabel('IndCP - QLT')
+    plt.title(f'Lam vs IndCP - QLT')
+    plt.legend()
+    plt.grid(True)
+
+    # Save the plot to a file
+    plt.savefig(output_file, dpi=300)
+    print(f"Filtered plot saved as '{output_file}'")

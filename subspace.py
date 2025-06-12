@@ -2,6 +2,7 @@ from __future__ import annotations
 import numpy as np
 from typing import *
 
+import graph_generate as gg
 from graph_generate import Graph
 import matrix_manip as mm
 
@@ -257,8 +258,9 @@ def is_independent(matrix: np.ndarray, basis: List[np.ndarray]) -> bool:
     flattened_basis = [mat.flatten() for mat in basis]
     flattened_new = matrix.flatten()
     
-    matrix_stack = np.vstack(flattened_basis + [flattened_new])
     rank_before = np.linalg.matrix_rank(np.vstack(flattened_basis))
+
+    matrix_stack = np.vstack(flattened_basis + [flattened_new])
     rank_after = np.linalg.matrix_rank(matrix_stack)
     
     return rank_after > rank_before
@@ -377,6 +379,35 @@ def random(n: int) -> Subspace:
     sub.constraints = extract_basis(a, len(bvecs))
 
     return sub
+
+def get_conjugate_basis(myUni: np.ndarray, basis: List[np.ndarray]) -> List[np.ndarray]:
+    """
+    Given compatible unitary matrix and a basis of matrices, say {b_i}, define a basis to be {Ub_iU*} 
+    """
+    myUniH = myUni.conj().T
+    newbasis = []
+    for element in basis:
+        prod1 = np.dot(myUni, element)
+        prod2 = np.dot(prod1, myUniH)
+        newbasis.append(np.array(prod2))
+    return newbasis
+
+def sg1_rotate_sg2(unitary: np.ndarray, sg1: Subspace, sg2: Subspace):
+    """
+    Given two graph systems and a compatible unitary matrix, define the quantum graph given by Usg1U* + Sg2
+    #Jordan L checked this function implementation to his original test implementation.
+    """
+
+    myQuantumBasis = get_conjugate_basis(unitary, sg1.basis)
+    extend_basis(myQuantumBasis, iter(sg2.basis))
+    myQuantumGraph = from_basis(myQuantumBasis)
+    return myQuantumGraph
+
+def random2(n: int) -> Subspace:
+    graph1 = gg.random(n, np.random.random() ** 2)
+    graph2 = gg.random(n, np.random.random() ** 2)
+    unitary = mm.rand_uni(n)
+    return sg1_rotate_sg2(unitary, sg(graph1), sg(graph2))
 
 def random_s1_s2(n: int, density=0.3) -> Tuple[Subspace, Subspace, Subspace]:
     """

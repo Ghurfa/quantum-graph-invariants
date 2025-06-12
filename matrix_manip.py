@@ -63,6 +63,13 @@ def is_psd(mat: np.ndarray) -> bool:
     good = all(eig > 0 or np.isclose(eig, 0) for eig in eigs)
     return good
 
+def choi_mat(n: int, phi: Callable[[np.ndarray], np.ndarray]) -> np.ndarray:
+    mat = np.zeros((n * n, n * n))
+    for i in range(n):
+        for j in range(n):
+            e = e_matrix(n, i, j)
+            mat += np.kron(e, phi(e))
+    return mat
 
 def _delegate_op(numpy_op):
     """Decorator to apply a numpy operation to self.data and return an instance of self.__class__."""
@@ -103,7 +110,7 @@ class SimpleMatrix:
         """
         Enable combining SimpleMatrix with numpy arrays in expressions like adding
         """
-        
+
         inputs = tuple(i.data if isinstance(i, SimpleMatrix) else i for i in inputs)
         result = getattr(ufunc, method)(*inputs, **kwargs)
         return self.__class__(result) if isinstance(result, np.ndarray) else result

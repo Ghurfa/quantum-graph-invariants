@@ -45,7 +45,7 @@ def araiza_4_1(s1: Subspace, s2: Subspace, pt_axis: int) -> Tuple[float, np.ndar
     SDP:
     Maximize lam such that
     1. (tr (x) id)(X) = (1 - lam)(I_n)              or          (id (x) tr)(X) = (1 - lam)(I_n)
-    2. X + lam * delta_matrix_n \in (S1 (x) S2) + (S1^perp (x) M_n)
+    2. X + lam * delta_matrix_n in (S1 (x) S2) + (S1^perp (x) M_n)
     3. X is a PSD n^2 by n^2 matrix
 
     SDP modified from the one given in prop 4.1
