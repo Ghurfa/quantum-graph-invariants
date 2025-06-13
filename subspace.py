@@ -70,7 +70,51 @@ class Subspace:
     
     def __repr__(self):
         return self.__str__()
-            
+
+def tensor(s1: Subspace, s2: Subspace) -> Subspace:
+    """
+    Generate the tensor product subspace of s1 and s2
+    """
+
+    ret = Subspace(s1.n * s2.n)
+    ret.basis = [np.kron(b1, b2) for b1 in s1.basis for b2 in s2.basis]
+    ret.constraints =   [np.kron(c1, c2) for c1 in s1.constraints for c2 in s2.constraints] + \
+                        [np.kron(b1, c2) for b1 in s1.basis for c2 in s2.constraints] + \
+                        [np.kron(c1, b2) for c1 in s1.constraints for b2 in s2.basis]
+
+    return ret
+
+def direct_sum(s1: Subspace, s2: Subspace) -> Subspace:
+    """
+    Generate the direct sum subspace of s1 and s2
+    """
+    
+    n = s1.n + s2.n
+    ret = Subspace(n)
+    ret.basis = [np.pad(b1, ((0, s2.n), (0, s2.n)), 'constant', constant_values=(0, 0)) for b1 in s1.basis] + \
+                [np.pad(b2, ((s1.n, 0), (s1.n, 0)), 'constant', constant_values=(0, 0)) for b2 in s2.basis]
+    ret.constraints =   [np.pad(c1, ((0, s2.n), (0, s2.n)), 'constant', constant_values=(0, 0)) for c1 in s1.constraints] + \
+                        [np.pad(c2, ((s1.n, 0), (s1.n, 0)), 'constant', constant_values=(0, 0)) for c2 in s2.constraints] + \
+                        [mm.e_matrix(n, i, j) for i in range(s1.n, n) for j in range(0, s1.n)] + \
+                        [mm.e_matrix(n, i, j) for j in range(s1.n, n) for i in range(0, s1.n)]
+
+    return ret
+
+def complete_sum(s1: Subspace, s2: Subspace) -> Subspace:
+    """
+    Generate the complete sum subspace of s1 and s2
+    """
+    
+    n = s1.n + s2.n
+    ret = Subspace(n)
+    ret.basis = [np.pad(b1, ((0, s2.n), (0, s2.n)), 'constant', constant_values=(0, 0)) for b1 in s1.basis] + \
+                [np.pad(b2, ((s1.n, 0), (s1.n, 0)), 'constant', constant_values=(0, 0)) for b2 in s2.basis] + \
+                [mm.e_matrix(n, i, j) for i in range(s1.n, n) for j in range(0, s1.n)] + \
+                [mm.e_matrix(n, i, j) for j in range(s1.n, n) for i in range(0, s1.n)]
+    ret.constraints =   [np.pad(c1, ((0, s2.n), (0, s2.n)), 'constant', constant_values=(0, 0)) for c1 in s1.constraints] + \
+                        [np.pad(c2, ((s1.n, 0), (s1.n, 0)), 'constant', constant_values=(0, 0)) for c2 in s2.constraints]
+    
+    return ret
 
 def mn(n: int) -> Subspace:
     """
