@@ -23,6 +23,10 @@ class Subspace:
         ret.basis = self.constraints
         return ret
     
+    @property
+    def compl(self) -> Subspace:
+        return from_basis([np.identity(self.n)] + self.constraints)
+    
     def contains(self, mat: np.ndarray) -> bool:
         return all(np.isclose(np.trace(constraint @ mat.T), 0) for constraint in self.constraints)
 
@@ -161,23 +165,8 @@ def eg(graph: Graph) -> Subspace:
     """
 
     n = graph.n
-    ret = Subspace(n)
-    edges, non_edges = graph.edges
-    
-    ret.basis.append(np.identity(n))
-    for i in range(1, n):
-        mat = np.zeros([n, n])
-        mat[0, 0] = 1
-        mat[i, i] = -1
-        ret.constraints.append(mat)
-
-    for (i, j) in edges:
-        ret.basis.append(mm.e_matrix(n, i, j))
-
-    for (i, j) in non_edges:
-        ret.constraints.append(mm.e_matrix(n, i, j))
-    
-    return ret
+    edges, _ = graph.edges
+    return from_basis([np.identity(n)] + [mm.e_matrix(n, i, j) for (i, j) in edges])
 
 def antilaplacian(graph: Graph) -> Subspace:
     """
@@ -272,7 +261,7 @@ def validate_partial_basis(basis: List[np.ndarray], incl_id: bool):
     (if incl_id = True) or in their orthogonal space (if incl_id = False)
     """
 
-    assert isinstance(basis, List)
+    assert isinstance(basis, List), "Basis is wrong datatype"
     
     if len(basis) == 0:
         assert not(incl_id)
@@ -282,14 +271,14 @@ def validate_partial_basis(basis: List[np.ndarray], incl_id: bool):
     assert len(shape) == 2
     n = shape[0]
 
-    assert all(bvec.shape == (n, n) for bvec in basis)
-    assert all(bvec.any() for bvec in basis)
-    assert all(any(np.allclose(other, bvec.conj().T) or np.allclose(-other, bvec.conj().T) for other in basis) for bvec in basis)
-    assert all(is_ortho(bvec, basis[:i]) for i, bvec in enumerate(basis))
+    assert all(bvec.shape == (n, n) for bvec in basis), "Basis contains nonsquare matrices"
+    assert all(bvec.any() for bvec in basis), "Basis contains a zero matrix"
+    assert all(any(np.allclose(other, bvec.conj().T) or np.allclose(-other, bvec.conj().T) for other in basis) for bvec in basis), "Basis contains duplicate elements"
+    assert all(is_ortho(bvec, basis[:i]) for i, bvec in enumerate(basis)), "Basis is not orthogonal"
     if incl_id:
-        assert not(is_independent(np.identity(n), basis))
+        assert not(is_independent(np.identity(n), basis)), "Basis does not contain the identity"
     else:
-        assert is_ortho(np.identity(n), basis)
+        assert is_ortho(np.identity(n), basis), "Basis is not orthogonal to the identity when it should be"
 
 def is_independent(matrix: np.ndarray, basis: List[np.ndarray]) -> bool:
     """
@@ -426,15 +415,11 @@ def random(n: int) -> Subspace:
 
 def get_conjugate_basis(myUni: np.ndarray, basis: List[np.ndarray]) -> List[np.ndarray]:
     """
-    Given compatible unitary matrix and a basis of matrices, say {b_i}, define a basis to be {Ub_iU*} 
+    Given compatible (semi-)unitary matrix and a basis of matrices, say {b_i}, define a basis to be {Ub_iU*} 
     """
+
     myUniH = myUni.conj().T
-    newbasis = []
-    for element in basis:
-        prod1 = np.dot(myUni, element)
-        prod2 = np.dot(prod1, myUniH)
-        newbasis.append(np.array(prod2))
-    return newbasis
+    return [myUniH @ bvec @ myUni for bvec in basis]
 
 def sg1_rotate_sg2(unitary: np.ndarray, sg1: Subspace, sg2: Subspace):
     """
@@ -501,3 +486,13 @@ def random_s1_s2(n: int, density=0.3) -> Tuple[Subspace, Subspace, Subspace]:
     s1pps2.constraints = extract_basis(a, b)
 
     return s1, s2, s1pps2
+
+def random_tk(n: int) -> Subspace:
+    matrix = np.zeros((n, n))
+    indices = np.random.choice(n * n, n, replace=False)
+    for index in indices:
+        i, j = divmod(index, n)
+        matrix[i, j] = matrix[j, i] = np.random.random() * 4 - 2
+    
+    matrix -= np.identity(n) * np.trace(matrix) / n
+    return tk(matrix)

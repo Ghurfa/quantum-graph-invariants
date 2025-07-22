@@ -53,3 +53,6 @@ def lt_relative(gamma: Graph, lam: Graph) -> Tuple[float, SimpleSymmMatrix]:
 
 def quantil(gamma: Graph) -> Tuple[float, SimpleChoiMatrix]:
     return lt_quantum(ss.antilaplacian(gamma))
+
+def lam_til_dsw(subspace: Subspace) -> Tuple[float, SimpleChoiMatrix]:
+    return ii.araiza_4_1(subspace.compl, ss.ci(subspace.n), 1)

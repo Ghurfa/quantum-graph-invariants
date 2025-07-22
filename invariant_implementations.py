@@ -3,7 +3,7 @@ import numpy as np
 from typing import *
 
 import matrix_manip as mm
-from matrix_manip import SimpleSymmMatrix, SimpleChoiMatrix
+import subspace as ss
 from subspace import Subspace
 
 def lt_general(subspace: Subspace) -> Tuple[float, np.ndarray]:
@@ -45,7 +45,7 @@ def araiza_4_1(s1: Subspace, s2: Subspace, pt_axis: int) -> Tuple[float, np.ndar
     SDP:
     Maximize lam such that
     1. (tr (x) id)(X) = (1 - lam)(I_n)              or          (id (x) tr)(X) = (1 - lam)(I_n)
-    2. X + lam * delta_matrix_n in (S1 (x) S2) + (S1^perp (x) M_n)
+    2. X + lam * delta_matrix_n in (S1 (x) S2) + (S1^perp (x) M_n) = (S1 (x) S2^perp)^perp
     3. X is a PSD n^2 by n^2 matrix
 
     SDP modified from the one given in prop 4.1
@@ -71,3 +71,39 @@ def araiza_4_1(s1: Subspace, s2: Subspace, pt_axis: int) -> Tuple[float, np.ndar
     prob.solve()
     return 1 / float(lam.value), X.value
 
+def f_invar(code):
+    def invar(subspace: Subspace) -> float:
+        """
+        some QLT candidate
+        """
+        n = subspace.n
+
+        X = cvxpy.Variable((n * n, n * n), symmetric=True)
+        lam = cvxpy.Variable(1)
+
+        constraints = [
+            cvxpy.partial_trace(X, (n, n), 0) == (1 - lam) * np.identity(n),  # Constraint 1
+            X >> 0                                                            # Constraint 3
+        ]
+        
+        basis = [np.identity(n)]
+        ss.extend_basis(basis, iter(subspace.basis))
+        dim = len(basis)
+        ss.extend_basis(basis)
+
+        parts = [basis[dim:], basis[1:dim], basis[:1]]
+        for i, first_list in enumerate(parts):
+            for j, second_list in enumerate(parts):
+                mask = 1 << (3 * i + j)
+                should_constrain = (code & mask) != 0
+                if not(should_constrain):
+                    continue
+
+                for a in first_list:
+                    for b in second_list:
+                        constraints.append(cvxpy.trace((X + lam * mm.delta_matrix(n)) @ np.kron(a, b)) == 0)
+        
+        prob = cvxpy.Problem(cvxpy.Maximize(lam), constraints)
+        prob.solve()
+        return 1 / float(lam.value[0]) #, X.value
+    return invar
