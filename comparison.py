@@ -9,7 +9,7 @@ import cvxopt.solvers
 
 from graph_generate import Graph as CustomGraph
 from subspace import Subspace, mn
-from invariants import lt_quantum, ind_cp
+from invariant_interfaces import qlt, ind_cp
 from subspace import sg
 from graph_generate import random
 
@@ -99,7 +99,7 @@ if __name__ == "__main__":
                 S_G = sg(G)
 
                 indcp_val, _ = ind_cp(mn(S_G.n), S_G)
-                qtheta_val, _ = lt_quantum(S_G)
+                qtheta_val, _ = qlt(S_G)
 
                 print("Classical Lovász theta:", theta)
                 print("Ind_CP(M_n : S_G):", indcp_val)

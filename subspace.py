@@ -8,33 +8,31 @@ import matrix_manip as mm
 
 class Subspace:
     def __init__(self, n: int):
-        self._n = n
-        self.basis = []
+        self.n = n
+        self.s0 = []
         self.constraints = []
-
-    @property
-    def n(self) -> int:
-        return self._n
     
     @property
-    def perp(self) -> Subspace:
-        ret = Subspace(self.n)
-        ret.constraints = self.basis
-        ret.basis = self.constraints
-        return ret
+    def basis(self) -> Iterable[np.ndarray]:
+        yield np.identity(self.n)
+        for bvec in self.s0:
+            yield bvec
     
     @property
     def compl(self) -> Subspace:
-        return from_basis([np.identity(self.n)] + self.constraints)
+        ret = Subspace(self.n)
+        ret.s0 = self.constraints
+        ret.constraints = self.s0
+        return ret
     
     def contains(self, mat: np.ndarray) -> bool:
         return all(np.isclose(np.trace(constraint @ mat.T), 0) for constraint in self.constraints)
 
     def is_subspace_of(self, other: Subspace) -> bool:
-        if self._n != other._n:
+        if self.n != other.n:
             return False
         
-        return all(other.contains(bvec) for bvec in self.basis)
+        return all(other.contains(bvec) for bvec in self.s0)
     
     def ensure_valid(self):
         """
@@ -45,28 +43,20 @@ class Subspace:
 
         n = self.n
 
-        if not(self.contains(np.identity(n))):
-            raise ValueError("Does not contain identity")
+        assert all(np.isclose(np.trace(bvec), 0) for bvec in self.s0), "A S0 vector is not traceless"
+        assert all(np.isclose(np.trace(bvec), 0) for bvec in self.constraints), "A constraint vector is not traceless"
 
-        if len(self.basis) + len(self.constraints) != n * n:
-            raise ValueError("Basis or constraints are incomplete (wrong number)")
+        assert len(self.s0) + len(self.constraints) == n * n - 1, "Basis or constraints are incomplete (wrong number)"
         
-        super_space = Subspace(n)
-        super_space.basis = self.basis + self.constraints
-
-        if not(mn(n).is_subspace_of(super_space)):
-            raise ValueError("Basis or constraints are incomplete (S + S^perp != M_n)")
+        assert is_independent([np.identity(n)] + self.s0 + self.constraints), "Basis or constraints are incomplete (S + S^perp != M_n)"
         
-        for bvec in self.basis:
+        for bvec in self.s0:
             adjoint = bvec.conj().T
-            for bvec_other in self.basis:
-                if np.allclose(adjoint, bvec_other) or np.allclose(-adjoint, bvec_other):
-                    break
-            else:
-                raise ValueError("Basis missing adjoint of basis vector (cannot verify closure under adjoint)")
+            assert any(np.allclose(adjoint, bvec_other) or np.allclose(-adjoint, bvec_other) for bvec_other in self.s0), \
+                "Basis missing adjoint of basis vector (cannot verify closure under adjoint)"
             
     def __str__(self):
-        integral = 'int' in str(self.basis[0].dtype)
+        integral = ('int' in str(self.s0[0].dtype)) if len(self.s0) > 0 else ('int' in str(self.constraints[0].dtype))
         precision = 0 if integral else 2
         ret = "BASIS:\n" + "\n----------------\n".join(str(mm.SimpleMatrix(bvec, precision)) for bvec in self.basis) + \
               "\n\nCONSTRAINTS:\n" + "\n\n".join(str(mm.SimpleMatrix(const, precision)) for const in self.constraints)
@@ -81,22 +71,41 @@ def tensor(s1: Subspace, s2: Subspace) -> Subspace:
     """
 
     ret = Subspace(s1.n * s2.n)
-    ret.basis = [np.kron(b1, b2) for b1 in s1.basis for b2 in s2.basis]
+    ret.s0 = [np.kron(b1, b2) for b1 in s1.s0 for b2 in s2.s0] + \
+             [np.kron(np.identity(s1.n), b2) for b2 in s2.s0] + \
+             [np.kron(b1, np.identity(s2.n)) for b1 in s1.s0]
     ret.constraints =   [np.kron(c1, c2) for c1 in s1.constraints for c2 in s2.constraints] + \
                         [np.kron(b1, c2) for b1 in s1.basis for c2 in s2.constraints] + \
                         [np.kron(c1, b2) for c1 in s1.constraints for b2 in s2.basis]
 
     return ret
 
-def direct_sum(s1: Subspace, s2: Subspace) -> Subspace:
+def tensor2(s1: Subspace, s2: Subspace) -> Subspace:
+    """
+    Generate the tensor product subspace of s1 and s2, but with the identity in the basis
+    """
+
+    ret = Subspace(s1.n * s2.n)
+    ret.s0 =    [np.kron(b1, b2) for b1 in s1.s0 for b2 in s2.s0] + \
+                [np.kron(b1, c2) for b1 in s1.basis for c2 in s2.constraints] + \
+                [np.kron(c1, b2) for c1 in s1.constraints for b2 in s2.basis] + \
+                [np.kron(np.identity(s1.n), b2) for b2 in s2.s0] + \
+                [np.kron(b1, np.identity(s2.n)) for b1 in s1.s0]
+    ret.constraints =   [np.kron(c1, c2) for c1 in s1.constraints for c2 in s2.constraints]
+
+    return ret
+
+def direct_union(s1: Subspace, s2: Subspace) -> Subspace:
     """
     Generate the direct sum subspace of s1 and s2
     """
     
     n = s1.n + s2.n
     ret = Subspace(n)
-    ret.basis = [np.pad(b1, ((0, s2.n), (0, s2.n)), 'constant', constant_values=(0, 0)) for b1 in s1.basis] + \
-                [np.pad(b2, ((s1.n, 0), (s1.n, 0)), 'constant', constant_values=(0, 0)) for b2 in s2.basis]
+    ret.s0 = [np.pad(b1, ((0, s2.n), (0, s2.n)), 'constant', constant_values=(0, 0)) for b1 in s1.s0] + \
+             [np.pad(b2, ((s1.n, 0), (s1.n, 0)), 'constant', constant_values=(0, 0)) for b2 in s2.s0] + \
+             [np.pad(np.identity(s1.n), ((0, s2.n), (0, s2.n)), 'constant', constant_values=(0, 0)) / s1.n -
+              np.pad(np.identity(s2.n), ((s1.n, 0), (s1.n, 0)), 'constant', constant_values=(0, 0)) / s2.n]
     ret.constraints =   [np.pad(c1, ((0, s2.n), (0, s2.n)), 'constant', constant_values=(0, 0)) for c1 in s1.constraints] + \
                         [np.pad(c2, ((s1.n, 0), (s1.n, 0)), 'constant', constant_values=(0, 0)) for c2 in s2.constraints] + \
                         [mm.e_matrix(n, i, j) for i in range(s1.n, n) for j in range(0, s1.n)] + \
@@ -104,34 +113,37 @@ def direct_sum(s1: Subspace, s2: Subspace) -> Subspace:
 
     return ret
 
-def complete_sum(s1: Subspace, s2: Subspace) -> Subspace:
+def complete_union(s1: Subspace, s2: Subspace) -> Subspace:
     """
     Generate the complete sum subspace of s1 and s2
     """
-    
+
     n = s1.n + s2.n
     ret = Subspace(n)
-    ret.basis = [np.pad(b1, ((0, s2.n), (0, s2.n)), 'constant', constant_values=(0, 0)) for b1 in s1.basis] + \
-                [np.pad(b2, ((s1.n, 0), (s1.n, 0)), 'constant', constant_values=(0, 0)) for b2 in s2.basis] + \
+    ret.s0 =    [np.pad(b1, ((0, s2.n), (0, s2.n)), 'constant', constant_values=(0, 0)) for b1 in s1.s0] + \
+                [np.pad(b2, ((s1.n, 0), (s1.n, 0)), 'constant', constant_values=(0, 0)) for b2 in s2.s0] + \
+                [np.pad(np.identity(s1.n), ((0, s2.n), (0, s2.n)), 'constant', constant_values=(0, 0)) / s1.n -
+                 np.pad(np.identity(s2.n), ((s1.n, 0), (s1.n, 0)), 'constant', constant_values=(0, 0)) / s2.n] + \
                 [mm.e_matrix(n, i, j) for i in range(s1.n, n) for j in range(0, s1.n)] + \
                 [mm.e_matrix(n, i, j) for j in range(s1.n, n) for i in range(0, s1.n)]
     ret.constraints =   [np.pad(c1, ((0, s2.n), (0, s2.n)), 'constant', constant_values=(0, 0)) for c1 in s1.constraints] + \
                         [np.pad(c2, ((s1.n, 0), (s1.n, 0)), 'constant', constant_values=(0, 0)) for c2 in s2.constraints]
-    
     return ret
+    # return direct_union(s1.compl, s2.compl).compl
+
+def complete_product(s1: Subspace, s2: Subspace) -> Subspace:
+    """
+    Generate the complete product subspace of s1 and s2
+    """
+    
+    return tensor(s1.compl, s2.compl).compl
 
 def mn(n: int) -> Subspace:
     """
     Generate the complete vector space M_n with the standard basis
     """
 
-    ret = Subspace(n)
-
-    for i in range(n):
-        for j in range(n):
-            ret.basis.append(mm.e_matrix(n, i, j))
-
-    return ret
+    return from_basis([mm.e_matrix(n, i, j) for i in range(n) for j in range(n)])
 
 def ci(n: int) -> Subspace:
     """
@@ -148,16 +160,7 @@ def sg(graph: Graph) -> Subspace:
     ret = Subspace(n)
     edges, non_edges = graph.edges
     
-    for i in range(n):
-        ret.basis.append(mm.e_matrix(n, i, i))
-
-    for (i, j) in edges:
-        ret.basis.append(mm.e_matrix(n, i, j))
-
-    for (i, j) in non_edges:
-        ret.constraints.append(mm.e_matrix(n, i, j))
-    
-    return ret
+    return from_basis([mm.e_matrix(n, i, j) for i in range(n) for j in range(n) if ((i, j) in edges) or (i == j)])
 
 def eg(graph: Graph) -> Subspace:
     """
@@ -226,11 +229,13 @@ def from_basis(basis: List[np.ndarray]):
     n = basis[0].shape[0]
     ret = Subspace(n)
 
+    new_basis = [np.identity(n)]
+    extend_basis(new_basis, iter(basis))
     basis_dim = len(basis)
-    extend_basis(basis)
+    extend_basis(new_basis)
 
-    ret.basis = basis[:basis_dim]
-    ret.constraints = basis[basis_dim:]
+    ret.s0 = new_basis[1 : basis_dim]
+    ret.constraints = new_basis[basis_dim :]
 
     ret.ensure_valid()
     return ret
@@ -245,11 +250,13 @@ def from_constraints(constraints: List[np.ndarray]):
     n = constraints[0].shape[0]
     ret = Subspace(n)
 
+    new_basis = [np.identity(n)]
+    extend_basis(new_basis, iter(constraints))
     constraints_dim = len(constraints)
-    extend_basis(constraints)
+    extend_basis(new_basis)
 
-    ret.constraints = constraints[:constraints_dim]
-    ret.basis = constraints[constraints_dim:]
+    ret.constraints = new_basis[1 : constraints_dim]
+    ret.s0 = new_basis[constraints_dim :]
 
     ret.ensure_valid()
     return ret
@@ -257,7 +264,7 @@ def from_constraints(constraints: List[np.ndarray]):
 def validate_partial_basis(basis: List[np.ndarray], incl_id: bool):
     """
     Checks that the given basis consists of matrices that are of the same size & are
-    nonzero & mutually orthogonal. Also either checks that identity is in their span
+    nonzero & linearly independent. Also either checks that identity is in their span
     (if incl_id = True) or in their orthogonal space (if incl_id = False)
     """
 
@@ -271,16 +278,21 @@ def validate_partial_basis(basis: List[np.ndarray], incl_id: bool):
     assert len(shape) == 2
     n = shape[0]
 
+    assert is_independent(basis), "Basis is not independent"
     assert all(bvec.shape == (n, n) for bvec in basis), "Basis contains nonsquare matrices"
     assert all(bvec.any() for bvec in basis), "Basis contains a zero matrix"
     assert all(any(np.allclose(other, bvec.conj().T) or np.allclose(-other, bvec.conj().T) for other in basis) for bvec in basis), "Basis contains duplicate elements"
-    assert all(is_ortho(bvec, basis[:i]) for i, bvec in enumerate(basis)), "Basis is not orthogonal"
     if incl_id:
-        assert not(is_independent(np.identity(n), basis)), "Basis does not contain the identity"
+        assert not(is_independent_from(np.identity(n), basis)), "Basis does not contain the identity"
     else:
         assert is_ortho(np.identity(n), basis), "Basis is not orthogonal to the identity when it should be"
 
-def is_independent(matrix: np.ndarray, basis: List[np.ndarray]) -> bool:
+def is_independent(basis: List[np.ndarray]) -> bool:
+    flattened = [mat.flatten() for mat in basis]
+    rank = np.linalg.matrix_rank(np.vstack(flattened))
+    return rank == len(basis)
+
+def is_independent_from(matrix: np.ndarray, basis: List[np.ndarray]) -> bool:
     """
     Checks if matrix is linearly independent from the given basis
     """
@@ -318,24 +330,29 @@ def orthogonalize(matrix: np.ndarray, basis: List[np.ndarray]) -> np.ndarray:
 
     return matrix
 
-def extend_basis(basis: List[np.ndarray], mat_src: Iterator[np.ndarray] = None, mat_standardizer: Callable[[np.ndarray], np.ndarray] = mm.normalize):
+def extend_basis(ortho_basis: List[np.ndarray], mat_src: Iterator[np.ndarray] = None, mat_standardizer: Callable[[np.ndarray], np.ndarray] = mm.normalize):
     """
-    Starting with the given nonempty matrix basis, extends it in-place by taking matrices from mat_src
+    Starting with the given orthogonal matrix basis, extends it in-place by taking matrices from mat_src
     and orthogonalizing them. Ends when mat_src runs out or when the basis is a complete basis for M_n.
     If mat_src is unspecified, then we use the standard basis for M_n
     """
 
-    n = basis[0].shape[0]
+    assert mat_src or (ortho_basis and (len(ortho_basis) > 0))
+
+    if len(ortho_basis) == 0:
+        ortho_basis.append(next(mat_src))
+
+    n = ortho_basis[0].shape[0]
 
     if not(mat_src):
-        mat_src = iter(mn(n).basis)
+        mat_src = iter(mm.e_matrix(n, i, j) for i in range(n) for j in range(n))
     
-    while len(basis) < n * n:
+    while len(ortho_basis) < n * n:
         matrix = next(mat_src, None)
         if matrix is None:                      # mat_src is exhausted
             return
 
-        matrix = orthogonalize(matrix, basis)
+        matrix = orthogonalize(matrix, ortho_basis)
         if np.allclose(matrix, np.zeros_like(matrix)):  # Regenerate if matrix is in span of basis already
             continue
         if mat_standardizer:
@@ -343,20 +360,20 @@ def extend_basis(basis: List[np.ndarray], mat_src: Iterator[np.ndarray] = None, 
         
         adjoint = matrix.conj().T
         if np.allclose(matrix, adjoint) or np.allclose(matrix, -adjoint):
-            basis.append(matrix)
-        elif is_ortho(adjoint, basis + [matrix]):
-            basis.append(matrix)
-            basis.append(adjoint)
+            ortho_basis.append(matrix)
+        elif is_ortho(adjoint, ortho_basis + [matrix]):
+            ortho_basis.append(matrix)
+            ortho_basis.append(adjoint)
         else:
             matrix = matrix + adjoint
             if mat_standardizer:
                 matrix = mat_standardizer(matrix)
-            if is_ortho(matrix, basis):
-                basis.append(matrix)
+            if is_ortho(matrix, ortho_basis):
+                ortho_basis.append(matrix)
 
 def random_basis(n: int, density=0.3) -> List[np.ndarray]:
     """
-    Genekrates a randomized basis for M_n
+    Genekrates a randomized basis for M_n. Basis[0] = I_n
     """
 
     basis = [np.identity(n)]
@@ -408,14 +425,14 @@ def random(n: int) -> Subspace:
         return ret
 
     sub = Subspace(n)
-    sub.basis = extract_basis(0, a)
+    sub.s0 = extract_basis(1, a)
     sub.constraints = extract_basis(a, len(bvecs))
 
     return sub
 
 def get_conjugate_basis(myUni: np.ndarray, basis: List[np.ndarray]) -> List[np.ndarray]:
     """
-    Given compatible (semi-)unitary matrix and a basis of matrices, say {b_i}, define a basis to be {Ub_iU*} 
+    Given compatible (semi-)unitary matrix (U* U = I) and a basis { b_i }, return { U* b_i U }
     """
 
     myUniH = myUni.conj().T
@@ -426,7 +443,6 @@ def sg1_rotate_sg2(unitary: np.ndarray, sg1: Subspace, sg2: Subspace):
     Given two graph systems and a compatible unitary matrix, define the quantum graph given by Usg1U* + Sg2
     #Jordan L checked this function implementation to his original test implementation.
     """
-
     myQuantumBasis = get_conjugate_basis(unitary, sg1.basis)
     extend_basis(myQuantumBasis, iter(sg2.basis))
     myQuantumGraph = from_basis(myQuantumBasis)
@@ -459,7 +475,7 @@ def random_s1_s2(n: int, density=0.3) -> Tuple[Subspace, Subspace, Subspace]:
     np.random.shuffle(bvecs[1:])
 
     # Partition basis vectors. S2 will be formed from matrices 0 (inclusive) to a (exclusive)
-    a = np.random.randint(1, len(bvecs))
+    a = np.random.randint(2, len(bvecs))
     b = np.random.randint(a, len(bvecs))
 
     def extract_basis(start, stop) -> List[np.ndarray]:
@@ -474,15 +490,15 @@ def random_s1_s2(n: int, density=0.3) -> Tuple[Subspace, Subspace, Subspace]:
         return ret
 
     s2 = Subspace(n)
-    s2.basis = extract_basis(0, a)
+    s2.s0 = extract_basis(1, a)
     s2.constraints = extract_basis(a, len(bvecs))
 
     s1 = Subspace(n)
-    s1.basis = extract_basis(0, b)
+    s1.s0 = extract_basis(1, b)
     s1.constraints = extract_basis(b, len(bvecs))
 
     s1pps2 = Subspace(n)
-    s1pps2.basis = s2.basis + s1.constraints
+    s1pps2.s0 = s2.s0 + s1.constraints
     s1pps2.constraints = extract_basis(a, b)
 
     return s1, s2, s1pps2

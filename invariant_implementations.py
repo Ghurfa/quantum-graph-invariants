@@ -36,7 +36,7 @@ def lt_general(subspace: Subspace) -> Tuple[float, np.ndarray]:
     prob.solve()
     return 1 + float(t.value), Y.value
 
-def araiza_4_1(s1: Subspace, s2: Subspace, pt_axis: int) -> Tuple[float, np.ndarray]:
+def ags_4_1(s1: Subspace, s2: Subspace, pt_axis: int) -> Tuple[float, np.ndarray]:
     """
     Computes either the SDP in Prop 4.1 (gives Ind_CP(S1 : S2)) or the SDP in Prop 4.8
     (gives quantum Lovasz Theta). They differ only by the axis of the partial trace in constraint 1.
@@ -48,7 +48,7 @@ def araiza_4_1(s1: Subspace, s2: Subspace, pt_axis: int) -> Tuple[float, np.ndar
     2. X + lam * delta_matrix_n in (S1 (x) S2) + (S1^perp (x) M_n) = (S1 (x) S2^perp)^perp
     3. X is a PSD n^2 by n^2 matrix
 
-    SDP modified from the one given in prop 4.1
+    SDP modified from the one given in AGS prop 4.1
     """
 
     n = s1.n
@@ -71,28 +71,31 @@ def araiza_4_1(s1: Subspace, s2: Subspace, pt_axis: int) -> Tuple[float, np.ndar
     prob.solve()
     return 1 / float(lam.value), X.value
 
-def f_invar(code):
-    def invar(subspace: Subspace) -> float:
+def f_invar(code) -> Callable[[Subspace], Tuple[float, np.ndarray]]:
+    def invar(subspace: Subspace) -> Tuple[float, np.ndarray]:
         """
-        some QLT candidate
+        SDP:
+        Maximize lam such that
+        1. (tr (x) id)(X) = lam * I_n
+        2. X in K   (K determined by code)
+        3. X - Delta_n is PSD
+
+        SDP modified from the one given in AGS prop 4.1
         """
+
         n = subspace.n
 
         X = cvxpy.Variable((n * n, n * n), symmetric=True)
         lam = cvxpy.Variable(1)
 
         constraints = [
-            cvxpy.partial_trace(X, (n, n), 0) == (1 - lam) * np.identity(n),  # Constraint 1
-            X >> 0                                                            # Constraint 3
+            cvxpy.partial_trace(X, (n, n), 0) == lam * np.identity(n),  # Constraint 1
+            X >> mm.delta_matrix(n)                                     # Constraint 3
         ]
         
-        basis = [np.identity(n)]
-        ss.extend_basis(basis, iter(subspace.basis))
-        dim = len(basis)
-        ss.extend_basis(basis)
+        parts = [subspace.constraints, subspace.s0, [np.identity(n)]]
 
-        parts = [basis[dim:], basis[1:dim], basis[:1]]
-        for i, first_list in enumerate(parts):
+        for i, first_list in enumerate(parts[:2]):
             for j, second_list in enumerate(parts):
                 mask = 1 << (3 * i + j)
                 should_constrain = (code & mask) != 0
@@ -101,9 +104,9 @@ def f_invar(code):
 
                 for a in first_list:
                     for b in second_list:
-                        constraints.append(cvxpy.trace((X + lam * mm.delta_matrix(n)) @ np.kron(a, b)) == 0)
-        
-        prob = cvxpy.Problem(cvxpy.Maximize(lam), constraints)
+                        constraints.append(cvxpy.trace(X @ np.kron(a, b)) == 0)
+            
+        prob = cvxpy.Problem(cvxpy.Minimize(lam), constraints)
         prob.solve()
-        return 1 / float(lam.value[0]) #, X.value
+        return float(lam.value[0]), X.value
     return invar

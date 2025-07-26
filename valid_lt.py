@@ -3,8 +3,7 @@ from typing import *
 from subspace import Subspace
 
 import graph_generate as gg
-import invariants
-import invariant_implementations as ii
+import invariant_interfaces
 import matrix_manip as mm
 import subspace as ss
 
@@ -16,7 +15,7 @@ def verify_extends(qlt: Callable[[Subspace], float]) -> bool:
     for n in range(2, 5):
         for i in range(n * n):
             graph = gg.random(n, i / (n * n))
-            expected = invariants.lt(graph)[0]
+            expected = invariant_interfaces.lt(graph)[0]
             actual = qlt(ss.sg(graph))
             if not(np.isclose(actual, expected, rtol=0.001)):
                 return False
@@ -46,7 +45,7 @@ def verify_additive(qlt: Callable[[Subspace], float]) -> bool:
     for i in range(30):
         qg1 = ss.random(n1)
         qg2 = ss.random(n2)
-        dir_sum = ss.direct_sum(qg1, qg2)
+        dir_sum = ss.direct_union(qg1, qg2)
         
         ltg1 = qlt(qg1)
         ltg2 = qlt(qg2)
@@ -64,7 +63,7 @@ def verify_maxitive(qlt: Callable[[Subspace], float]) -> bool:
     for i in range(0, 20):
         qg1 = ss.random(n1)
         qg2 = ss.random(n2)
-        comp_sum = ss.complete_sum(qg1, qg2)
+        comp_sum = ss.complete_union(qg1, qg2)
         
         ltg1 = qlt(qg1)
         ltg2 = qlt(qg2)
@@ -102,8 +101,7 @@ def verify_induced_monotonic(qlt: Callable[[Subspace], float]):
             semi_uni = uni[0 : n, 0 : k]
 
             lt1 = qlt(qg)
-            nice_basis = [mm.SimpleSymmMatrix(x) for x in ss.get_conjugate_basis(semi_uni, qg.basis)]
-            new_basis = [np.identity(k)]
+            new_basis = []
             ss.extend_basis(new_basis, iter(ss.get_conjugate_basis(semi_uni, qg.basis)))
             qg2 = ss.from_basis(new_basis)
             lt2 = qlt(qg2)
@@ -116,7 +114,7 @@ def verify_induced_monotonic(qlt: Callable[[Subspace], float]):
 def verify_lt_extension(qlt: Callable[[Subspace], float], name: str):
     """
     Verify that the Lovasz Theta quantum extension matches the normal Lovasz Theta on graph
-    systems and is multiplicative, additive, and max-ive
+    systems and is multiplicative, additive, and maxitive
     """
 
     if verify_extends(qlt):
@@ -135,9 +133,9 @@ def verify_lt_extension(qlt: Callable[[Subspace], float], name: str):
         print(f"{name} is not additive")
 
     if verify_maxitive(qlt):
-        print(f"{name} seems max-ive")
+        print(f"{name} seems maxitive")
     else:
-        print(f"{name} is not max-ive")
+        print(f"{name} is not maxitive")
     
     if verify_unitary_invar(qlt):
         print(f"{name} seems invariant under conjugation with unitary")
@@ -151,45 +149,6 @@ def verify_lt_extension(qlt: Callable[[Subspace], float], name: str):
     
     exponent = np.log(qlt(ss.ci(7))) / np.log(7)
     print(f"Exponent of {name} is {round(exponent, 3)}")
-
-def gen_invar_dual(code):
-    def invar(subspace: Subspace) -> float:
-        import cvxpy
-        """
-        some QLT candidate
-        """
-        n = subspace.n
-
-        X = cvxpy.Variable((n, n), symmetric=True)
-        Y = cvxpy.Variable((n * n, n * n), symmetric=True)
-
-        constraints = [
-            cvxpy.trace(X) == 1,
-            X >> 0,
-            cvxpy.kron(np.identity(n), X) + Y >> 0
-        ]
-        
-        basis = [np.identity(n)]
-        ss.extend_basis(basis, iter(subspace.basis))
-        dim = len(basis)
-        ss.extend_basis(basis)
-
-        parts = [basis[dim:], basis[1:dim], basis[:1]]
-        for i, first_list in enumerate(parts):
-            for j, second_list in enumerate(parts):
-                mask = 1 << (3 * i + j)
-                should_constrain = (code & mask) == 0
-                if not(should_constrain):
-                    continue
-
-                for a in first_list:
-                    for b in second_list:
-                        constraints.append(cvxpy.trace(Y @ np.kron(a, b)) == 0)
-        
-        prob = cvxpy.Problem(cvxpy.Maximize(cvxpy.trace((cvxpy.kron(np.identity(n), X) + Y) @ mm.delta_matrix(n))), constraints)
-        prob.solve()
-        return float(prob.objective.value), X.value, Y.value
-    return invar
 
 np.random.seed(10702)
 
@@ -214,4 +173,4 @@ def shuffle_iso(mat: np.ndarray) -> np.ndarray:
     return new_mat
 
 np.random.seed(10700)
-verify_lt_extension(ii.f_invar(1), "(S^perp x S^perp)^perp")
+verify_maxitive(lambda x: invariant_interfaces.f_invar(7, x)[0])#, "(S^perp x S^perp)^perp")

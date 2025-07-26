@@ -1,7 +1,7 @@
 import numpy as np
 import matrix_manip as mm
 import subspace as ss
-import invariants as invar
+import invariant_interfaces as invar
 import graph_generate as gg
 
 def visualize_graph(adjMat: np.ndarray):
@@ -95,6 +95,6 @@ for i in range(10):
 
 
 
-    print("\nquantum theta of composite", invar.lt_quantum(myQgraph)[0])
+    print("\nquantum theta of composite", invar.qlt(myQgraph)[0])
     print("\nLovasz theta of graph 1", invar.lt_general(graphsystem1)[0])
     print("\nLovasz theta of graph 2", invar.lt_general(graphsystem2)[0])
