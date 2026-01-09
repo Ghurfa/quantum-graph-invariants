@@ -25,6 +25,13 @@ class Subspace:
         ret.constraints = self.s0
         return ret
     
+    def __add__(self, other: Subspace) -> Subspace:
+        assert other.n == self.n
+        
+        basis = list(self.basis)
+        extend_basis(basis, iter(other.s0))
+        return from_basis(basis)
+    
     def contains(self, mat: np.ndarray) -> bool:
         return all(np.isclose(np.trace(constraint @ mat.T), 0) for constraint in self.constraints)
 
@@ -37,7 +44,7 @@ class Subspace:
     def ensure_valid(self):
         """
         Checks whether the subspace is a valid matricial system, i.e. that self.basis and self.constraints
-        are linearly independent sets, that the constraints form a basis for S^perp, and that it constains
+        are orthogonal sets, that the constraints form a basis for S^perp, and that it constains
         the identity & is closed under taking the adjoint
         """
 
@@ -51,9 +58,7 @@ class Subspace:
         assert is_independent([np.identity(n)] + self.s0 + self.constraints), "Basis or constraints are incomplete (S + S^perp != M_n)"
         
         for bvec in self.s0:
-            adjoint = bvec.conj().T
-            assert any(np.allclose(adjoint, bvec_other) or np.allclose(-adjoint, bvec_other) for bvec_other in self.s0), \
-                "Basis missing adjoint of basis vector (cannot verify closure under adjoint)"
+            assert self.contains(bvec.conj().T), "Not closed under taking adjoint"
             
     def __str__(self):
         integral = ('int' in str(self.s0[0].dtype)) if len(self.s0) > 0 else ('int' in str(self.constraints[0].dtype))
@@ -80,9 +85,9 @@ def tensor(s1: Subspace, s2: Subspace) -> Subspace:
 
     return ret
 
-def tensor2(s1: Subspace, s2: Subspace) -> Subspace:
+def cotensor(s1: Subspace, s2: Subspace) -> Subspace:
     """
-    Generate the tensor product subspace of s1 and s2, but with the identity in the basis
+    Returns the subspace (s1^perp x s2^perp)^perp
     """
 
     ret = Subspace(s1.n * s2.n)
@@ -91,7 +96,7 @@ def tensor2(s1: Subspace, s2: Subspace) -> Subspace:
                 [np.kron(c1, b2) for c1 in s1.constraints for b2 in s2.basis] + \
                 [np.kron(np.identity(s1.n), b2) for b2 in s2.s0] + \
                 [np.kron(b1, np.identity(s2.n)) for b1 in s1.s0]
-    ret.constraints =   [np.kron(c1, c2) for c1 in s1.constraints for c2 in s2.constraints]
+    ret.constraints = [np.kron(c1, c2) for c1 in s1.constraints for c2 in s2.constraints]
 
     return ret
 
@@ -113,11 +118,10 @@ def direct_union(s1: Subspace, s2: Subspace) -> Subspace:
 
     return ret
 
-def complete_union(s1: Subspace, s2: Subspace) -> Subspace:
+def complete_union_perp(s1: Subspace, s2: Subspace) -> Subspace:
     """
     Generate the complete sum subspace of s1 and s2
     """
-
     n = s1.n + s2.n
     ret = Subspace(n)
     ret.s0 =    [np.pad(b1, ((0, s2.n), (0, s2.n)), 'constant', constant_values=(0, 0)) for b1 in s1.s0] + \
@@ -129,9 +133,18 @@ def complete_union(s1: Subspace, s2: Subspace) -> Subspace:
     ret.constraints =   [np.pad(c1, ((0, s2.n), (0, s2.n)), 'constant', constant_values=(0, 0)) for c1 in s1.constraints] + \
                         [np.pad(c2, ((s1.n, 0), (s1.n, 0)), 'constant', constant_values=(0, 0)) for c2 in s2.constraints]
     return ret
-    # return direct_union(s1.compl, s2.compl).compl
+
+def complete_union_compl(s1: Subspace, s2: Subspace) -> Subspace:
+    return direct_union(s1.compl, s2.compl).compl
 
 def complete_product(s1: Subspace, s2: Subspace) -> Subspace:
+    """
+    Generate the complete product subspace of s1 and s2
+    """
+    
+    return tensor(s1.compl, s2.compl).compl
+
+def complete_product_perp(s1: Subspace, s2: Subspace) -> Subspace:
     """
     Generate the complete product subspace of s1 and s2
     """
@@ -157,10 +170,8 @@ def sg(graph: Graph) -> Subspace:
     """
 
     n = graph.n
-    ret = Subspace(n)
-    edges, non_edges = graph.edges
     
-    return from_basis([mm.e_matrix(n, i, j) for i in range(n) for j in range(n) if ((i, j) in edges) or (i == j)])
+    return from_basis([mm.e_matrix(n, i, j) for i in range(n) for j in range(n) if ((i, j) in graph.edges) or (i == j)])
 
 def eg(graph: Graph) -> Subspace:
     """
@@ -168,8 +179,7 @@ def eg(graph: Graph) -> Subspace:
     """
 
     n = graph.n
-    edges, _ = graph.edges
-    return from_basis([np.identity(n)] + [mm.e_matrix(n, i, j) for (i, j) in edges])
+    return from_basis([np.identity(n)] + [mm.e_matrix(n, i, j) for (i, j) in graph.edges])
 
 def antilaplacian(graph: Graph) -> Subspace:
     """
@@ -252,7 +262,7 @@ def from_constraints(constraints: List[np.ndarray]):
 
     new_basis = [np.identity(n)]
     extend_basis(new_basis, iter(constraints))
-    constraints_dim = len(constraints)
+    constraints_dim = len(new_basis)
     extend_basis(new_basis)
 
     ret.constraints = new_basis[1 : constraints_dim]
@@ -322,7 +332,7 @@ def orthogonalize(matrix: np.ndarray, basis: List[np.ndarray]) -> np.ndarray:
     Modifies the matrix to be orthogonal to the given basis via Gram-Schmidt
     """
 
-    matrix = matrix.copy()
+    matrix = matrix.astype(float, copy=True)
     for bvec in basis:
         num = np.trace(bvec @ matrix.T)
         denom = np.trace(bvec @ bvec.conj().T)
@@ -337,10 +347,27 @@ def extend_basis(ortho_basis: List[np.ndarray], mat_src: Iterator[np.ndarray] = 
     If mat_src is unspecified, then we use the standard basis for M_n
     """
 
+    def add_to_basis(matrix):
+        adjoint = matrix.conj().T
+        if np.allclose(matrix, adjoint) or np.allclose(matrix, -adjoint):
+            ortho_basis.append(matrix)
+        elif is_ortho(adjoint, ortho_basis + [matrix]):
+            ortho_basis.append(matrix)
+            ortho_basis.append(adjoint)
+        else:
+            matrix = matrix + adjoint
+            if mat_standardizer:
+                matrix = mat_standardizer(matrix)
+            if is_ortho(matrix, ortho_basis):
+                ortho_basis.append(matrix)
+
     assert mat_src or (ortho_basis and (len(ortho_basis) > 0))
 
     if len(ortho_basis) == 0:
-        ortho_basis.append(next(mat_src))
+        first = next(mat_src, None)
+        if first is None:
+            return
+        add_to_basis(first)
 
     n = ortho_basis[0].shape[0]
 
@@ -358,18 +385,7 @@ def extend_basis(ortho_basis: List[np.ndarray], mat_src: Iterator[np.ndarray] = 
         if mat_standardizer:
             matrix = mat_standardizer(matrix)
         
-        adjoint = matrix.conj().T
-        if np.allclose(matrix, adjoint) or np.allclose(matrix, -adjoint):
-            ortho_basis.append(matrix)
-        elif is_ortho(adjoint, ortho_basis + [matrix]):
-            ortho_basis.append(matrix)
-            ortho_basis.append(adjoint)
-        else:
-            matrix = matrix + adjoint
-            if mat_standardizer:
-                matrix = mat_standardizer(matrix)
-            if is_ortho(matrix, ortho_basis):
-                ortho_basis.append(matrix)
+        add_to_basis(matrix)
 
 def random_basis(n: int, density=0.3) -> List[np.ndarray]:
     """

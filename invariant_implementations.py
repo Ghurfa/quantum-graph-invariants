@@ -11,22 +11,22 @@ def lt_general(subspace: Subspace) -> Tuple[float, np.ndarray]:
     Calculates min{ max_i{A_ii : A in S, A - J_n is PSD }}
 
     SDP:
-    Minimize t + 1 such that
-    1. Y + J_n in S
+    Minimize t such that
+    1. Y in S
     2. Y_ii <= t
-    3. Y is a PSD n by n matrix
+    3. Y - J_n is PSD
     """
 
     n = subspace.n
 
     Y = cvxpy.Variable((n, n), symmetric=True)
-    t = cvxpy.Variable(1)
+    t = cvxpy.Variable()
 
-    constraints = [Y >> 0]  # Constraint 3
+    constraints = [Y >> np.ones([n, n])]  # Constraint 3
 
     # Constraint 1
     for constraint in subspace.constraints:
-        constraints.append(cvxpy.trace((Y + np.ones([n, n])) @ constraint) == 0)
+        constraints.append(cvxpy.trace(Y @ constraint) == 0)
 
     # Constraint 2
     for i in range(n):
@@ -34,7 +34,7 @@ def lt_general(subspace: Subspace) -> Tuple[float, np.ndarray]:
 
     prob = cvxpy.Problem(cvxpy.Minimize(t), constraints)
     prob.solve()
-    return 1 + float(t.value), Y.value
+    return float(t.value), Y.value
 
 def ags_4_1(s1: Subspace, s2: Subspace, pt_axis: int) -> Tuple[float, np.ndarray]:
     """
@@ -54,7 +54,7 @@ def ags_4_1(s1: Subspace, s2: Subspace, pt_axis: int) -> Tuple[float, np.ndarray
     n = s1.n
 
     X = cvxpy.Variable((n * n, n * n), symmetric=True)
-    lam = cvxpy.Variable(1)
+    lam = cvxpy.Variable()
 
     constraints = [
         cvxpy.partial_trace(X, (n, n), pt_axis) == (1 - lam) * np.identity(n),  # Constraint 1
@@ -71,13 +71,13 @@ def ags_4_1(s1: Subspace, s2: Subspace, pt_axis: int) -> Tuple[float, np.ndarray
     prob.solve()
     return 1 / float(lam.value), X.value
 
-def f_invar(code) -> Callable[[Subspace], Tuple[float, np.ndarray]]:
+def f_invar(code: int) -> Callable[[Subspace], Tuple[float, np.ndarray]]:
     def invar(subspace: Subspace) -> Tuple[float, np.ndarray]:
         """
         SDP:
         Maximize lam such that
         1. (tr (x) id)(X) = lam * I_n
-        2. X in K   (K determined by code)
+        2. X in K   (K determined by the code parameter)
         3. X - Delta_n is PSD
 
         SDP modified from the one given in AGS prop 4.1
@@ -86,7 +86,7 @@ def f_invar(code) -> Callable[[Subspace], Tuple[float, np.ndarray]]:
         n = subspace.n
 
         X = cvxpy.Variable((n * n, n * n), symmetric=True)
-        lam = cvxpy.Variable(1)
+        lam = cvxpy.Variable()
 
         constraints = [
             cvxpy.partial_trace(X, (n, n), 0) == lam * np.identity(n),  # Constraint 1
@@ -108,5 +108,5 @@ def f_invar(code) -> Callable[[Subspace], Tuple[float, np.ndarray]]:
             
         prob = cvxpy.Problem(cvxpy.Minimize(lam), constraints)
         prob.solve()
-        return float(lam.value[0]), X.value
+        return float(lam.value), X.value
     return invar

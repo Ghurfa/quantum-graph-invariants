@@ -27,23 +27,14 @@ class Graph:
 
 
     @property
-    def edges(self) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]:
+    def edges(self) -> List[Tuple[int, int]]:
         """
-        Return the edge list of a graph and the edge list of the complementary graph
+        Return the edge list of a graph
 
         Note that if [i,j] is an edge, then [j,i] is also considered an edge.
         """
         
-        edge = []
-        edge_complement = []
-        for node in self.adj_list:
-            for neighbour in self.adj_list[node]:
-                edge.append((node, neighbour))
-        for i in range(self._n):
-            for j in range(self._n):
-                if (i, j) not in edge and i != j:
-                    edge_complement.append((i, j))
-        return edge, edge_complement
+        return [(a, b) for a in self.adj_list for b in self.adj_list[a]]
 
     @property
     def adjacency_matrix(self) -> np.ndarray:
@@ -52,9 +43,8 @@ class Graph:
         """
 
         n = self._n
-        edges, _ = self.edges
         E = np.zeros((n, n))
-        for x in edges:
+        for x in self.edges:
             E[x[0], x[1]] = 1
         return E
 
@@ -65,10 +55,9 @@ class Graph:
         vertex degrees on the diagonal
         """
         n = self._n
-        edges, _ = self.edges
         L = np.zeros((n, n))
 
-        for (i, j) in edges:
+        for (i, j) in self.edges:
             L[i, j] = -1
         
         for i in range(n):
@@ -92,6 +81,50 @@ class Graph:
     
     def __repr__(self):
         return self.__str__()
+
+def cartesian_product(g1: Graph, g2: Graph) -> Graph:
+    def adj(i, j):
+        return set(x * g2.n + j for x in g1.adj_list[i]) | \
+               set(i * g2.n + x for x in g2.adj_list[j])
+    adj_list = { i * g2.n + j: list(adj(i, j)) for i in range(g1.n) for j in range(g2.n) }
+    return Graph(adj_list)
+
+def modular_product(g1: Graph, g2: Graph) -> Graph:
+    def adj(i, j):
+        return  set(x * g2.n + y for x in range(g1.n) for y in range(g2.n) if (x in g1.adj_list[i]) == (y in g2.adj_list[j])) - \
+                {i * g2.n + j}
+        
+    adj_list = { i * g2.n + j: list(adj(i, j)) for i in range(g1.n) for j in range(g2.n) }
+    return Graph(adj_list)
+
+def strong_product(g1: Graph, g2: Graph) -> Graph:
+    def adj(i, j):
+        return set(x * g2.n + j for x in g1.adj_list[i]) | \
+               set(i * g2.n + x for x in g2.adj_list[j]) | \
+               set(x1 * g2.n + x2 for x1 in g1.adj_list[i] for x2 in g2.adj_list[j])
+    adj_list = { i * g2.n + j: list(adj(i, j)) for i in range(g1.n) for j in range(g2.n) }
+    return Graph(adj_list)
+
+def direct_union(g1: Graph, g2: Graph) -> Graph:
+    adj_list_1 = g1.adj_list
+    adj_list_2 = {i + g1.n: [x + g1.n for x in g2.adj_list[i]] for i in range(g2.n)}
+    return Graph(adj_list_1 | adj_list_2)
+
+def cotensor_product(g1: Graph, g2: Graph) -> Graph:
+    def adj(i, j):
+        return (set(x * g2.n + j for x in range(g1.n)) | \
+               set(i * g2.n + x for x in range(g2.n)) | \
+               set(x * g2.n + a for x in range(g1.n) for a in g2.adj_list[j]) | \
+               set(a * g2.n + x for x in range(g2.n) for a in g1.adj_list[i])) - \
+               {i * g2.n + j}
+    adj_list = { i * g2.n + j: list(adj(i, j)) for i in range(g1.n) for j in range(g2.n) }
+    return Graph(adj_list)
+
+def tensor_product(g1: Graph, g2: Graph) -> Graph:
+    def adj(i, j):
+        return set(x1 * g2.n + x2 for x1 in g1.adj_list[i] for x2 in g2.adj_list[j])
+    adj_list = { i * g2.n + j: list(adj(i, j)) for i in range(g1.n) for j in range(g2.n) }
+    return Graph(adj_list)
 
 def cycle(n: int) -> Graph:
     """
@@ -164,10 +197,13 @@ def from_edge_list(n: int, *edge_list: List[Tuple[int, int]]) -> Graph:
         adj_list[j].append(i)
     return Graph(adj_list)
 
-def random(n: int, density: float) -> Graph:
+def random(n: int, density: float = -1) -> Graph:
     """
     Generate a random graph with the given density
     """
+
+    if density < 0:
+        density = np.random.random()
 
     edge_list = []
     for i in range(n):

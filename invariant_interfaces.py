@@ -1,5 +1,4 @@
 from typing import *
-import numpy as np
 
 import invariant_implementations as impl
 import subspace as ss
@@ -32,9 +31,7 @@ def ind_cp(s1: Subspace, s2: Subspace) -> Tuple[float, SimpleChoiMatrix]:
     return round(val, result_precision), SimpleChoiMatrix(witness)
 
 def lam_tilde(subspace: Subspace) -> Tuple[float, SimpleChoiMatrix]:
-    subspace.ensure_valid()
-    val, witness = impl.ags_4_1(subspace, ss.ci(subspace.n), 0)
-    return round(val, result_precision), SimpleChoiMatrix(witness)
+    return f_invar(24, subspace)
 
 def qlt(subspace: Subspace) -> Tuple[float, SimpleChoiMatrix]:
     """
@@ -68,10 +65,12 @@ def quantil(gamma: Graph) -> Tuple[float, SimpleChoiMatrix]:
     return qlt(ss.antilaplacian(gamma))
 
 def lam_til_dsw(subspace: Subspace) -> Tuple[float, SimpleChoiMatrix]:
-    subspace.ensure_valid()
-    return impl.ags_4_1(subspace.compl, ss.ci(subspace.n), 1)
+    return qlt_relative(subspace.compl, ss.ci(subspace.n))
 
 def f_invar(code: int, subspace: Subspace) -> Tuple[float, SimpleChoiMatrix]:
     subspace.ensure_valid()
+    assert type(code) == int
+    assert code >= 0 and code < 64
 
-    return impl.f_invar(code)(subspace)
+    val, witness = impl.f_invar(code)(subspace)
+    return round(val, result_precision), SimpleChoiMatrix(witness)
